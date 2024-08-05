@@ -15,7 +15,7 @@ targets:
     name: Bump cluster-api version
     kind: yaml
     spec:
-      key: cluster_api.tag
+      key: $.cluster_api.tag
       file: version.yaml
   packageFile:
     name: Sync cluster-api-rs version
@@ -25,3 +25,10 @@ targets:
       file: Cargo.toml
     transformers:
       - trimprefix: "v"
+  commit:
+    name: Add and commit the changes
+    kind: shell
+    spec:
+      command: just add-and-commit
+      environments:
+        - name: PATH
