@@ -2,13 +2,6 @@
 name: Updatecli
 
 on:
-  # Trigger Updatecli if a new commit land on the main branch
-  push:
-    branches: [main]
-  # Trigger Updatecli if a pullrequest is open targeting the main branch.
-  # This is useful to test Updatecli manifest change
-  pull_request:
-    branches: [main]
   # Manually trigger Updatecli via GitHub UI
   workflow_dispatch:
   # Trigger Updatecli once day by a cronjob
@@ -23,7 +16,7 @@ permissions:
 
 jobs:
   updatecli:
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -31,8 +24,54 @@ jobs:
       - name: Install Updatecli in the runner
         uses: updatecli/updatecli-action@v2
 
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
       - name: Run Updatecli in apply mode
         run: "updatecli apply"
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           GITHUB_USER: "github-action"
+
+      - name: Push the changes
+        run: |
+          git push
+
+  crates_io_publish:
+    name: Publish (crates.io)
+    needs:
+      - updatecli
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: cargo-release Cache
+        id: cargo_release_cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/cargo-release
+          key: ${{ runner.os }}-cargo-release
+
+      - run: cargo install cargo-release
+        if: steps.cargo_release_cache.outputs.cache-hit != 'true'
+
+      - name: cargo login
+        run: cargo login ${{ secrets.CRATES_IO_API_TOKEN }}
+
+      - name: cargo release publish
+        run: |-
+          cargo release \
+            publish \
+            --workspace \
+            --all-features \
+            --no-confirm \
+            --no-verify \
+            --execute

@@ -31,6 +31,10 @@ current-version path: _download-yq
 update-version: _download-updatecli
     updatecli apply --debug
 
+add-and-commit version:
+    git add .
+    -[[ -z "$(git status -s)" ]] || git commit -sm "Bump to version to {{version}}"
+
 # format with nightly rustfmt
 fmt:
     cargo +nightly fmt
