@@ -1,0 +1,18 @@
+
+[dependencies]
+schemars = "0.8.21"
+serde = "1.0.204"
+serde_json = "1.0.122"
+
+[dependencies.k8s-openapi]
+features = ["schemars"]
+version = "0.22.0"
+
+[dependencies.kube]
+features = ["derive"]
+version = "0.93.1"
+
+[package]
+edition = "2021"
+name = "cluster-api-rs"
+version = "1.7.4"

@@ -1,0 +1,27 @@
+sources:
+  sourceid:
+    name: Get release version from cluster-api
+    kind: githubRelease
+    spec:
+      owner: "kubernetes-sigs"
+      repository: "cluster-api"
+      username: '{{ requiredEnv "GITHUB_USER" }}'
+      token: '{{ requiredEnv "GITHUB_TOKEN" }}'
+      versionfilter:
+        kind: "latest"
+
+targets:
+  versionFile:
+    name: Bump cluster-api version
+    kind: yaml
+    spec:
+      key: cluster_api.tag
+      file: version.yaml
+  packageFile:
+    name: Sync cluster-api-rs version
+    kind: toml
+    spec:
+      key: package.version
+      file: Cargo.toml
+    transformers:
+      - trimprefix: "v"
