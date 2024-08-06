@@ -37,7 +37,7 @@ add-and-commit version:
 
 # format with nightly rustfmt
 fmt:
-    cargo +nightly fmt
+    cargo fmt
 
 # Install kopium
 [private]
