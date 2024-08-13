@@ -28,6 +28,9 @@ targets:
   commit:
     name: Add and commit the changes
     kind: shell
+    dependson:
+      - packageFile
+      - versionFile
     spec:
       command: just add-and-commit
       environments:
