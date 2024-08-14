@@ -31,6 +31,11 @@ current-version path: _download-yq
 update-version: _download-updatecli
     updatecli apply --debug
 
+generate-and-commit: generate
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    just add-and-commit `just current-version ".cluster_api.tag"`
+
 add-and-commit version:
     git add .
     -[[ -z "$(git status -s)" ]] || git commit -sm "Bump to version to {{version}}"

@@ -34,7 +34,7 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Run Updatecli in apply mode
-        run: "just generate"
+        run: "just generate-and-commit"
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           GITHUB_USER: "github-action"
