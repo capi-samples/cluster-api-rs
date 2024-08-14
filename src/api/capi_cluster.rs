@@ -480,10 +480,10 @@ pub struct ClusterTopologyControlPlaneVariables {
 /// Variable definition in the ClusterClass `status` variables.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, JsonSchema)]
 pub struct ClusterTopologyControlPlaneVariablesOverrides {
-    /// DefinitionFrom specifies where the definition of this Variable is from. DefinitionFrom is `inline` when the
-    /// definition is from the ClusterClass `.spec.variables` or the name of a patch defined in the ClusterClass
-    /// `.spec.patches` where the patch is external and provides external variables.
-    /// This field is mandatory if the variable has `DefinitionsConflict: true` in ClusterClass `status.variables[]`
+    /// DefinitionFrom specifies where the definition of this Variable is from.
+    ///
+    ///
+    /// Deprecated: This field is deprecated, must not be set anymore and is going to be removed in the next apiVersion.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -506,10 +506,10 @@ pub struct ClusterTopologyControlPlaneVariablesOverrides {
 /// Variable definition in the ClusterClass `status` variables.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, JsonSchema)]
 pub struct ClusterTopologyVariables {
-    /// DefinitionFrom specifies where the definition of this Variable is from. DefinitionFrom is `inline` when the
-    /// definition is from the ClusterClass `.spec.variables` or the name of a patch defined in the ClusterClass
-    /// `.spec.patches` where the patch is external and provides external variables.
-    /// This field is mandatory if the variable has `DefinitionsConflict: true` in ClusterClass `status.variables[]`
+    /// DefinitionFrom specifies where the definition of this Variable is from.
+    ///
+    ///
+    /// Deprecated: This field is deprecated, must not be set anymore and is going to be removed in the next apiVersion.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -925,10 +925,10 @@ pub struct ClusterTopologyWorkersMachineDeploymentsVariables {
 /// Variable definition in the ClusterClass `status` variables.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, JsonSchema)]
 pub struct ClusterTopologyWorkersMachineDeploymentsVariablesOverrides {
-    /// DefinitionFrom specifies where the definition of this Variable is from. DefinitionFrom is `inline` when the
-    /// definition is from the ClusterClass `.spec.variables` or the name of a patch defined in the ClusterClass
-    /// `.spec.patches` where the patch is external and provides external variables.
-    /// This field is mandatory if the variable has `DefinitionsConflict: true` in ClusterClass `status.variables[]`
+    /// DefinitionFrom specifies where the definition of this Variable is from.
+    ///
+    ///
+    /// Deprecated: This field is deprecated, must not be set anymore and is going to be removed in the next apiVersion.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -1049,10 +1049,10 @@ pub struct ClusterTopologyWorkersMachinePoolsVariables {
 /// Variable definition in the ClusterClass `status` variables.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, JsonSchema)]
 pub struct ClusterTopologyWorkersMachinePoolsVariablesOverrides {
-    /// DefinitionFrom specifies where the definition of this Variable is from. DefinitionFrom is `inline` when the
-    /// definition is from the ClusterClass `.spec.variables` or the name of a patch defined in the ClusterClass
-    /// `.spec.patches` where the patch is external and provides external variables.
-    /// This field is mandatory if the variable has `DefinitionsConflict: true` in ClusterClass `status.variables[]`
+    /// DefinitionFrom specifies where the definition of this Variable is from.
+    ///
+    ///
+    /// Deprecated: This field is deprecated, must not be set anymore and is going to be removed in the next apiVersion.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -1077,7 +1077,11 @@ pub struct ClusterStatus {
     /// Conditions defines current service state of the cluster.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conditions: Option<Vec<Condition>>,
-    /// ControlPlaneReady defines if the control plane is ready.
+    /// ControlPlaneReady denotes if the control plane became ready during initial provisioning
+    /// to receive requests.
+    /// NOTE: this field is part of the Cluster API contract and it is used to orchestrate provisioning.
+    /// The value of this field is never updated after provisioning is completed. Please use conditions
+    /// to check the operational state of the control plane.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
