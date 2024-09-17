@@ -15,7 +15,7 @@ permissions:
   pull-requests: "write"
 
 jobs:
-  updatecli:
+  crates_io_publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,35 +28,29 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Configure Git
-        run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-      - name: Run Updatecli in apply mode
-        run: "just generate-and-commit"
+      - name: Update and push the changes
+        id: push
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           GITHUB_USER: "github-action"
-
-      - name: Push the changes
         run: |
-          git push
+          git config --local user.email "49699333+dependabot[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          before=`just current-version ".cluster_api.tag"`
+          just generate-and-commit
+          after=`just current-version ".cluster_api.tag"`
+          if [[ "${before}" != "${after}" ]]; then
+            echo publish=true >> $GITHUB_OUTPUT
+            git push
+          fi
 
-  crates_io_publish:
-    name: Publish (crates.io)
-    needs:
-      - updatecli
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        if: steps.push.outputs.publish == 'true'
 
       - name: cargo login
+        if: steps.push.outputs.publish == 'true'
         run: cargo login ${{ secrets.CRATES_IO_API_TOKEN }}
 
       - name: cargo publish
-        run: |-
-          cargo publish --all-features
+        if: steps.push.outputs.publish == 'true'
+        run: cargo publish --all-features

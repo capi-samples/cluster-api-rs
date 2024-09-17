@@ -1,2 +1,12 @@
 pub mod capi_cluster;
 pub mod capi_clusterclass;
+pub mod capi_clusterresourceset;
+pub mod capi_clusterresourcesetbinding;
+pub mod capi_extensionconfig;
+pub mod capi_ipaddress;
+pub mod capi_ipaddressclaim;
+pub mod capi_machine;
+pub mod capi_machinedeployment;
+pub mod capi_machinehealthcheck;
+pub mod capi_machinepool;
+pub mod capi_machineset;

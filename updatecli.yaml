@@ -7,9 +7,9 @@ sources:
       repository: "cluster-api"
       username: '{{ requiredEnv "GITHUB_USER" }}'
       token: '{{ requiredEnv "GITHUB_TOKEN" }}'
-      versionfilter:
-        kind: "latest"
-
+      versionFilter:
+        kind: semver
+        pattern: =>v1.8.3
 targets:
   versionFile:
     name: Bump cluster-api version
@@ -17,6 +17,14 @@ targets:
     spec:
       key: $.cluster_api.tag
       file: version.yaml
+  updatecli:
+    name: Bump cluster-api version in updatecli pattern
+    kind: yaml
+    transformers:
+    - addprefix: "=>"
+    spec:
+      key: $.sources.sourceid.spec.versionFilter.pattern
+      file: updatecli.yaml
   packageFile:
     name: Sync cluster-api-rs version
     kind: toml
@@ -24,4 +32,4 @@ targets:
       key: package.version
       file: Cargo.toml
     transformers:
-      - trimprefix: "v"
+    - trimprefix: "v"
