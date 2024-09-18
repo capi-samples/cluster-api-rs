@@ -28,16 +28,16 @@ generate: _create-out-dir update-version && fmt
     just _generate-default-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/ipam.cluster.x-k8s.io_ipaddressclaims.yaml" "src/api/capi_ipaddressclaim.rs" ""
     just _generate-default-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/ipam.cluster.x-k8s.io_ipaddresses.yaml" "src/api/capi_ipaddress.rs" ""
     just _generate-default-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/runtime.cluster.x-k8s.io_extensionconfigs.yaml" "src/api/capi_extensionconfig.rs" ""
-    just _generate-default-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/addons.cluster.x-k8s.io_clusterresourcesets.yaml" "src/api/capi_clusterresourceset.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/addons.cluster.x-k8s.io_clusterresourcesets.yaml" "src/api/capi_clusterresourceset.rs" ""
     just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/addons.cluster.x-k8s.io_clusterresourcesetbindings.yaml" "src/api/capi_clusterresourcesetbinding.rs" ""
 
 [private]
 _generate-default-kopium-url kpath="" source="" dest="" yqexp="." condition="": _download-yq _install-kopium
-    curl -sSL {{source}} | yq '{{yqexp}}' | {{kpath}} -D Default {{condition}} -A -d -f - > {{dest}}
+    curl -sSL {{source}} | yq '{{yqexp}}' | {{kpath}} -D Default -D PartialEq {{condition}} -A -d -f - > {{dest}}
 
 [private]
 _generate-kopium-url kpath="" source="" dest="" yqexp="." condition="": _download-yq _install-kopium
-    curl -sSL {{source}} | yq '{{yqexp}}' | {{kpath}} {{condition}} -A -d -f - > {{dest}}
+    curl -sSL {{source}} | yq '{{yqexp}}' | {{kpath}} -D PartialEq {{condition}} -A -d -f - > {{dest}}
 
 current-version path: _download-yq
     cat version.yaml | yq '{{path}}'
