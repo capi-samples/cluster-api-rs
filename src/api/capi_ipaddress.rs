@@ -22,36 +22,34 @@ use self::prelude::*;
 #[kube(derive = "Default")]
 #[kube(derive = "PartialEq")]
 pub struct IPAddressSpec {
-    /// Address is the IP address.
+    /// address is the IP address.
     pub address: String,
-    /// ClaimRef is a reference to the claim this IPAddress was created for.
+    /// claimRef is a reference to the claim this IPAddress was created for.
     #[serde(rename = "claimRef")]
     pub claim_ref: IPAddressClaimRef,
-    /// Gateway is the network gateway of the network the address is from.
+    /// gateway is the network gateway of the network the address is from.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gateway: Option<String>,
-    /// PoolRef is a reference to the pool that this IPAddress was created from.
+    /// poolRef is a reference to the pool that this IPAddress was created from.
     #[serde(rename = "poolRef")]
     pub pool_ref: IPAddressPoolRef,
-    /// Prefix is the prefix of the address.
+    /// prefix is the prefix of the address.
     pub prefix: i64,
 }
 
-/// ClaimRef is a reference to the claim this IPAddress was created for.
+/// claimRef is a reference to the claim this IPAddress was created for.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct IPAddressClaimRef {
     /// Name of the referent.
     /// This field is effectively required, but due to backwards compatibility is
     /// allowed to be empty. Instances of this type with an empty value here are
     /// almost certainly wrong.
-    /// TODO: Add other useful fields. apiVersion, kind, uid?
     /// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-    /// TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 }
 
-/// PoolRef is a reference to the pool that this IPAddress was created from.
+/// poolRef is a reference to the pool that this IPAddress was created from.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct IPAddressPoolRef {
     /// APIGroup is the group for the resource being referenced.

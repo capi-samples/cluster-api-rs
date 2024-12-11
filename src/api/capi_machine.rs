@@ -25,13 +25,13 @@ use self::prelude::*;
 #[kube(derive = "Default")]
 #[kube(derive = "PartialEq")]
 pub struct MachineSpec {
-    /// Bootstrap is a reference to a local struct which encapsulates
+    /// bootstrap is a reference to a local struct which encapsulates
     /// fields to configure the Machine’s bootstrapping mechanism.
     pub bootstrap: MachineBootstrap,
-    /// ClusterName is the name of the Cluster this object belongs to.
+    /// clusterName is the name of the Cluster this object belongs to.
     #[serde(rename = "clusterName")]
     pub cluster_name: String,
-    /// FailureDomain is the failure domain the machine will be created in.
+    /// failureDomain is the failure domain the machine will be created in.
     /// Must match a key in the FailureDomains map stored on the cluster object.
     #[serde(
         default,
@@ -39,11 +39,11 @@ pub struct MachineSpec {
         rename = "failureDomain"
     )]
     pub failure_domain: Option<String>,
-    /// InfrastructureRef is a required reference to a custom resource
+    /// infrastructureRef is a required reference to a custom resource
     /// offered by an infrastructure provider.
     #[serde(rename = "infrastructureRef")]
     pub infrastructure_ref: ObjectReference,
-    /// NodeDeletionTimeout defines how long the controller will attempt to delete the Node that the Machine
+    /// nodeDeletionTimeout defines how long the controller will attempt to delete the Node that the Machine
     /// hosts after the Machine is marked for deletion. A duration of 0 will retry deletion indefinitely.
     /// Defaults to 10 seconds.
     #[serde(
@@ -52,7 +52,7 @@ pub struct MachineSpec {
         rename = "nodeDeletionTimeout"
     )]
     pub node_deletion_timeout: Option<String>,
-    /// NodeDrainTimeout is the total amount of time that the controller will spend on draining a node.
+    /// nodeDrainTimeout is the total amount of time that the controller will spend on draining a node.
     /// The default value is 0, meaning that the node can be drained without any time limitations.
     /// NOTE: NodeDrainTimeout is different from `kubectl drain --timeout`
     #[serde(
@@ -61,7 +61,7 @@ pub struct MachineSpec {
         rename = "nodeDrainTimeout"
     )]
     pub node_drain_timeout: Option<String>,
-    /// NodeVolumeDetachTimeout is the total amount of time that the controller will spend on waiting for all volumes
+    /// nodeVolumeDetachTimeout is the total amount of time that the controller will spend on waiting for all volumes
     /// to be detached. The default value is 0, meaning that the volumes can be detached without any time limitations.
     #[serde(
         default,
@@ -69,7 +69,7 @@ pub struct MachineSpec {
         rename = "nodeVolumeDetachTimeout"
     )]
     pub node_volume_detach_timeout: Option<String>,
-    /// ProviderID is the identification ID of the machine provided by the provider.
+    /// providerID is the identification ID of the machine provided by the provider.
     /// This field must match the provider ID as seen on the node object corresponding to this machine.
     /// This field is required by higher level consumers of cluster-api. Example use case is cluster autoscaler
     /// with cluster-api as provider. Clean-up logic in the autoscaler compares machines to nodes to find out
@@ -85,23 +85,43 @@ pub struct MachineSpec {
         rename = "providerID"
     )]
     pub provider_id: Option<String>,
-    /// Version defines the desired Kubernetes version.
+    /// readinessGates specifies additional conditions to include when evaluating Machine Ready condition.
+    ///
+    /// This field can be used e.g. by Cluster API control plane providers to extend the semantic of the
+    /// Ready condition for the Machine they control, like the kubeadm control provider adding ReadinessGates
+    /// for the APIServerPodHealthy, SchedulerPodHealthy conditions, etc.
+    ///
+    /// Another example are external controllers, e.g. responsible to install special software/hardware on the Machines;
+    /// they can include the status of those components with a new condition and add this condition to ReadinessGates.
+    ///
+    /// NOTE: This field is considered only for computing v1beta2 conditions.
+    /// NOTE: In case readinessGates conditions start with the APIServer, ControllerManager, Scheduler prefix, and all those
+    /// readiness gates condition are reporting the same message, when computing the Machine's Ready condition those
+    /// readinessGates will be replaced by a single entry reporting "Control plane components: " + message.
+    /// This helps to improve readability of conditions bubbling up to the Machine's owner resource / to the Cluster).
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "readinessGates"
+    )]
+    pub readiness_gates: Option<Vec<MachineReadinessGates>>,
+    /// version defines the desired Kubernetes version.
     /// This field is meant to be optionally used by bootstrap providers.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
 }
 
-/// Bootstrap is a reference to a local struct which encapsulates
+/// bootstrap is a reference to a local struct which encapsulates
 /// fields to configure the Machine’s bootstrapping mechanism.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineBootstrap {
-    /// ConfigRef is a reference to a bootstrap provider-specific resource
+    /// configRef is a reference to a bootstrap provider-specific resource
     /// that holds configuration details. The reference is optional to
     /// allow users/operators to specify Bootstrap.DataSecretName without
     /// the need of a controller.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "configRef")]
     pub config_ref: Option<ObjectReference>,
-    /// DataSecretName is the name of the secret that stores the bootstrap data script.
+    /// dataSecretName is the name of the secret that stores the bootstrap data script.
     /// If nil, the Machine should remain in the Pending state.
     #[serde(
         default,
@@ -111,7 +131,7 @@ pub struct MachineBootstrap {
     pub data_secret_name: Option<String>,
 }
 
-/// ConfigRef is a reference to a bootstrap provider-specific resource
+/// configRef is a reference to a bootstrap provider-specific resource
 /// that holds configuration details. The reference is optional to
 /// allow users/operators to specify Bootstrap.DataSecretName without
 /// the need of a controller.
@@ -131,7 +151,6 @@ pub struct MachineBootstrapConfigRef {
     /// the event) or if no container name is specified "spec.containers[2]" (container with
     /// index 2 in this pod). This syntax is chosen only to have some well-defined way of
     /// referencing a part of an object.
-    /// TODO: this design is not final and this field is subject to change in the future.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "fieldPath")]
     pub field_path: Option<String>,
     /// Kind of the referent.
@@ -160,7 +179,7 @@ pub struct MachineBootstrapConfigRef {
     pub uid: Option<String>,
 }
 
-/// InfrastructureRef is a required reference to a custom resource
+/// infrastructureRef is a required reference to a custom resource
 /// offered by an infrastructure provider.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineInfrastructureRef {
@@ -178,7 +197,6 @@ pub struct MachineInfrastructureRef {
     /// the event) or if no container name is specified "spec.containers[2]" (container with
     /// index 2 in this pod). This syntax is chosen only to have some well-defined way of
     /// referencing a part of an object.
-    /// TODO: this design is not final and this field is subject to change in the future.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "fieldPath")]
     pub field_path: Option<String>,
     /// Kind of the referent.
@@ -207,21 +225,31 @@ pub struct MachineInfrastructureRef {
     pub uid: Option<String>,
 }
 
+/// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct MachineReadinessGates {
+    /// conditionType refers to a positive polarity condition (status true means good) with matching type in the Machine's condition list.
+    /// If the conditions doesn't exist, it will be treated as unknown.
+    /// Note: Both Cluster API conditions or conditions added by 3rd party controllers can be used as readiness gates.
+    #[serde(rename = "conditionType")]
+    pub condition_type: String,
+}
+
 /// MachineStatus defines the observed state of Machine.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineStatus {
-    /// Addresses is a list of addresses assigned to the machine.
+    /// addresses is a list of addresses assigned to the machine.
     /// This field is copied from the infrastructure provider reference.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub addresses: Option<Vec<MachineStatusAddresses>>,
-    /// BootstrapReady is the state of the bootstrap provider.
+    /// bootstrapReady is the state of the bootstrap provider.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "bootstrapReady"
     )]
     pub bootstrap_ready: Option<bool>,
-    /// CertificatesExpiryDate is the expiry date of the machine certificates.
+    /// certificatesExpiryDate is the expiry date of the machine certificates.
     /// This value is only set for control plane machines.
     #[serde(
         default,
@@ -229,13 +257,16 @@ pub struct MachineStatus {
         rename = "certificatesExpiryDate"
     )]
     pub certificates_expiry_date: Option<String>,
-    /// Conditions defines current service state of the Machine.
+    /// conditions defines current service state of the Machine.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conditions: Option<Vec<Condition>>,
-    /// FailureMessage will be set in the event that there is a terminal problem
+    /// deletion contains information relating to removal of the Machine.
+    /// Only present when the Machine has a deletionTimestamp and drain or wait for volume detach started.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deletion: Option<MachineStatusDeletion>,
+    /// failureMessage will be set in the event that there is a terminal problem
     /// reconciling the Machine and will contain a more verbose string suitable
     /// for logging and human consumption.
-    ///
     ///
     /// This field should not be set for transitive errors that a controller
     /// faces that are expected to be fixed automatically over
@@ -246,20 +277,20 @@ pub struct MachineStatus {
     /// spec, values that are unsupported by the controller, or the
     /// responsible controller itself being critically misconfigured.
     ///
-    ///
     /// Any transient errors that occur during the reconciliation of Machines
     /// can be added as events to the Machine object and/or logged in the
     /// controller's output.
+    ///
+    /// Deprecated: This field is deprecated and is going to be removed in the next apiVersion. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "failureMessage"
     )]
     pub failure_message: Option<String>,
-    /// FailureReason will be set in the event that there is a terminal problem
+    /// failureReason will be set in the event that there is a terminal problem
     /// reconciling the Machine and will contain a succinct value suitable
     /// for machine interpretation.
-    ///
     ///
     /// This field should not be set for transitive errors that a controller
     /// faces that are expected to be fixed automatically over
@@ -270,48 +301,52 @@ pub struct MachineStatus {
     /// spec, values that are unsupported by the controller, or the
     /// responsible controller itself being critically misconfigured.
     ///
-    ///
     /// Any transient errors that occur during the reconciliation of Machines
     /// can be added as events to the Machine object and/or logged in the
     /// controller's output.
+    ///
+    /// Deprecated: This field is deprecated and is going to be removed in the next apiVersion. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "failureReason"
     )]
     pub failure_reason: Option<String>,
-    /// InfrastructureReady is the state of the infrastructure provider.
+    /// infrastructureReady is the state of the infrastructure provider.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "infrastructureReady"
     )]
     pub infrastructure_ready: Option<bool>,
-    /// LastUpdated identifies when the phase of the Machine last transitioned.
+    /// lastUpdated identifies when the phase of the Machine last transitioned.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "lastUpdated"
     )]
     pub last_updated: Option<String>,
-    /// NodeInfo is a set of ids/uuids to uniquely identify the node.
+    /// nodeInfo is a set of ids/uuids to uniquely identify the node.
     /// More info: https://kubernetes.io/docs/concepts/nodes/node/#info
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "nodeInfo")]
     pub node_info: Option<MachineStatusNodeInfo>,
-    /// NodeRef will point to the corresponding Node if it exists.
+    /// nodeRef will point to the corresponding Node if it exists.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "nodeRef")]
     pub node_ref: Option<ObjectReference>,
-    /// ObservedGeneration is the latest generation observed by the controller.
+    /// observedGeneration is the latest generation observed by the controller.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "observedGeneration"
     )]
     pub observed_generation: Option<i64>,
-    /// Phase represents the current phase of machine actuation.
+    /// phase represents the current phase of machine actuation.
     /// E.g. Pending, Running, Terminating, Failed etc.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub phase: Option<String>,
+    /// v1beta2 groups all the fields that will be added or modified in Machine's status with the V1Beta2 version.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub v1beta2: Option<MachineStatusV1beta2>,
 }
 
 /// MachineAddress contains information for the node's address.
@@ -324,7 +359,33 @@ pub struct MachineStatusAddresses {
     pub r#type: String,
 }
 
-/// NodeInfo is a set of ids/uuids to uniquely identify the node.
+/// deletion contains information relating to removal of the Machine.
+/// Only present when the Machine has a deletionTimestamp and drain or wait for volume detach started.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct MachineStatusDeletion {
+    /// nodeDrainStartTime is the time when the drain of the node started and is used to determine
+    /// if the NodeDrainTimeout is exceeded.
+    /// Only present when the Machine has a deletionTimestamp and draining the node had been started.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "nodeDrainStartTime"
+    )]
+    pub node_drain_start_time: Option<String>,
+    /// waitForNodeVolumeDetachStartTime is the time when waiting for volume detachment started
+    /// and is used to determine if the NodeVolumeDetachTimeout is exceeded.
+    /// Detaching volumes from nodes is usually done by CSI implementations and the current state
+    /// is observed from the node's `.Status.VolumesAttached` field.
+    /// Only present when the Machine has a deletionTimestamp and waiting for volume detachments had been started.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "waitForNodeVolumeDetachStartTime"
+    )]
+    pub wait_for_node_volume_detach_start_time: Option<String>,
+}
+
+/// nodeInfo is a set of ids/uuids to uniquely identify the node.
 /// More info: https://kubernetes.io/docs/concepts/nodes/node/#info
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineStatusNodeInfo {
@@ -339,7 +400,7 @@ pub struct MachineStatusNodeInfo {
     /// Kernel Version reported by the node from 'uname -r' (e.g. 3.16.0-0.bpo.4-amd64).
     #[serde(rename = "kernelVersion")]
     pub kernel_version: String,
-    /// KubeProxy Version reported by the node.
+    /// Deprecated: KubeProxy Version reported by the node.
     #[serde(rename = "kubeProxyVersion")]
     pub kube_proxy_version: String,
     /// Kubelet Version reported by the node.
@@ -363,7 +424,7 @@ pub struct MachineStatusNodeInfo {
     pub system_uuid: String,
 }
 
-/// NodeRef will point to the corresponding Node if it exists.
+/// nodeRef will point to the corresponding Node if it exists.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineStatusNodeRef {
     /// API version of the referent.
@@ -380,7 +441,6 @@ pub struct MachineStatusNodeRef {
     /// the event) or if no container name is specified "spec.containers[2]" (container with
     /// index 2 in this pod). This syntax is chosen only to have some well-defined way of
     /// referencing a part of an object.
-    /// TODO: this design is not final and this field is subject to change in the future.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "fieldPath")]
     pub field_path: Option<String>,
     /// Kind of the referent.
@@ -407,4 +467,17 @@ pub struct MachineStatusNodeRef {
     /// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uid: Option<String>,
+}
+
+/// v1beta2 groups all the fields that will be added or modified in Machine's status with the V1Beta2 version.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct MachineStatusV1beta2 {
+    /// conditions represents the observations of a Machine's current state.
+    /// Known condition types are Available, Ready, UpToDate, BootstrapConfigReady, InfrastructureReady, NodeReady,
+    /// NodeHealthy, Deleting, Paused.
+    /// If a MachineHealthCheck is targeting this machine, also HealthCheckSucceeded, OwnerRemediated conditions are added.
+    /// Additionally control plane Machines controlled by KubeadmControlPlane will have following additional conditions:
+    /// APIServerPodHealthy, ControllerManagerPodHealthy, SchedulerPodHealthy, EtcdPodHealthy, EtcdMemberHealthy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conditions: Option<Vec<Condition>>,
 }

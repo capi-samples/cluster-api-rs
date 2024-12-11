@@ -26,10 +26,10 @@ use self::prelude::*;
 #[kube(derive = "Default")]
 #[kube(derive = "PartialEq")]
 pub struct MachinePoolSpec {
-    /// ClusterName is the name of the Cluster this object belongs to.
+    /// clusterName is the name of the Cluster this object belongs to.
     #[serde(rename = "clusterName")]
     pub cluster_name: String,
-    /// FailureDomains is the list of failure domains this MachinePool should be attached to.
+    /// failureDomains is the list of failure domains this MachinePool should be attached to.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -46,7 +46,7 @@ pub struct MachinePoolSpec {
         rename = "minReadySeconds"
     )]
     pub min_ready_seconds: Option<i32>,
-    /// ProviderIDList are the identification IDs of machine instances provided by the provider.
+    /// providerIDList are the identification IDs of machine instances provided by the provider.
     /// This field must match the provider IDs as seen on the node objects corresponding to a machine pool's machine instances.
     #[serde(
         default,
@@ -58,11 +58,11 @@ pub struct MachinePoolSpec {
     /// This is a pointer to distinguish between explicit zero and not specified.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replicas: Option<i32>,
-    /// Template describes the machines that will be created.
+    /// template describes the machines that will be created.
     pub template: MachinePoolTemplate,
 }
 
-/// Template describes the machines that will be created.
+/// template describes the machines that will be created.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolTemplate {
     /// Standard object's metadata.
@@ -79,7 +79,7 @@ pub struct MachinePoolTemplate {
 /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolTemplateMetadata {
-    /// Annotations is an unstructured key value map stored with a resource that may be
+    /// annotations is an unstructured key value map stored with a resource that may be
     /// set by external tools to store and retrieve arbitrary metadata. They are not
     /// queryable and should be preserved when modifying objects.
     /// More info: http://kubernetes.io/docs/user-guide/annotations
@@ -97,13 +97,13 @@ pub struct MachinePoolTemplateMetadata {
 /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolTemplateSpec {
-    /// Bootstrap is a reference to a local struct which encapsulates
+    /// bootstrap is a reference to a local struct which encapsulates
     /// fields to configure the Machine’s bootstrapping mechanism.
     pub bootstrap: MachinePoolTemplateSpecBootstrap,
-    /// ClusterName is the name of the Cluster this object belongs to.
+    /// clusterName is the name of the Cluster this object belongs to.
     #[serde(rename = "clusterName")]
     pub cluster_name: String,
-    /// FailureDomain is the failure domain the machine will be created in.
+    /// failureDomain is the failure domain the machine will be created in.
     /// Must match a key in the FailureDomains map stored on the cluster object.
     #[serde(
         default,
@@ -111,11 +111,11 @@ pub struct MachinePoolTemplateSpec {
         rename = "failureDomain"
     )]
     pub failure_domain: Option<String>,
-    /// InfrastructureRef is a required reference to a custom resource
+    /// infrastructureRef is a required reference to a custom resource
     /// offered by an infrastructure provider.
     #[serde(rename = "infrastructureRef")]
     pub infrastructure_ref: ObjectReference,
-    /// NodeDeletionTimeout defines how long the controller will attempt to delete the Node that the Machine
+    /// nodeDeletionTimeout defines how long the controller will attempt to delete the Node that the Machine
     /// hosts after the Machine is marked for deletion. A duration of 0 will retry deletion indefinitely.
     /// Defaults to 10 seconds.
     #[serde(
@@ -124,7 +124,7 @@ pub struct MachinePoolTemplateSpec {
         rename = "nodeDeletionTimeout"
     )]
     pub node_deletion_timeout: Option<String>,
-    /// NodeDrainTimeout is the total amount of time that the controller will spend on draining a node.
+    /// nodeDrainTimeout is the total amount of time that the controller will spend on draining a node.
     /// The default value is 0, meaning that the node can be drained without any time limitations.
     /// NOTE: NodeDrainTimeout is different from `kubectl drain --timeout`
     #[serde(
@@ -133,7 +133,7 @@ pub struct MachinePoolTemplateSpec {
         rename = "nodeDrainTimeout"
     )]
     pub node_drain_timeout: Option<String>,
-    /// NodeVolumeDetachTimeout is the total amount of time that the controller will spend on waiting for all volumes
+    /// nodeVolumeDetachTimeout is the total amount of time that the controller will spend on waiting for all volumes
     /// to be detached. The default value is 0, meaning that the volumes can be detached without any time limitations.
     #[serde(
         default,
@@ -141,7 +141,7 @@ pub struct MachinePoolTemplateSpec {
         rename = "nodeVolumeDetachTimeout"
     )]
     pub node_volume_detach_timeout: Option<String>,
-    /// ProviderID is the identification ID of the machine provided by the provider.
+    /// providerID is the identification ID of the machine provided by the provider.
     /// This field must match the provider ID as seen on the node object corresponding to this machine.
     /// This field is required by higher level consumers of cluster-api. Example use case is cluster autoscaler
     /// with cluster-api as provider. Clean-up logic in the autoscaler compares machines to nodes to find out
@@ -157,23 +157,43 @@ pub struct MachinePoolTemplateSpec {
         rename = "providerID"
     )]
     pub provider_id: Option<String>,
-    /// Version defines the desired Kubernetes version.
+    /// readinessGates specifies additional conditions to include when evaluating Machine Ready condition.
+    ///
+    /// This field can be used e.g. by Cluster API control plane providers to extend the semantic of the
+    /// Ready condition for the Machine they control, like the kubeadm control provider adding ReadinessGates
+    /// for the APIServerPodHealthy, SchedulerPodHealthy conditions, etc.
+    ///
+    /// Another example are external controllers, e.g. responsible to install special software/hardware on the Machines;
+    /// they can include the status of those components with a new condition and add this condition to ReadinessGates.
+    ///
+    /// NOTE: This field is considered only for computing v1beta2 conditions.
+    /// NOTE: In case readinessGates conditions start with the APIServer, ControllerManager, Scheduler prefix, and all those
+    /// readiness gates condition are reporting the same message, when computing the Machine's Ready condition those
+    /// readinessGates will be replaced by a single entry reporting "Control plane components: " + message.
+    /// This helps to improve readability of conditions bubbling up to the Machine's owner resource / to the Cluster).
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "readinessGates"
+    )]
+    pub readiness_gates: Option<Vec<MachinePoolTemplateSpecReadinessGates>>,
+    /// version defines the desired Kubernetes version.
     /// This field is meant to be optionally used by bootstrap providers.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
 }
 
-/// Bootstrap is a reference to a local struct which encapsulates
+/// bootstrap is a reference to a local struct which encapsulates
 /// fields to configure the Machine’s bootstrapping mechanism.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolTemplateSpecBootstrap {
-    /// ConfigRef is a reference to a bootstrap provider-specific resource
+    /// configRef is a reference to a bootstrap provider-specific resource
     /// that holds configuration details. The reference is optional to
     /// allow users/operators to specify Bootstrap.DataSecretName without
     /// the need of a controller.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "configRef")]
     pub config_ref: Option<ObjectReference>,
-    /// DataSecretName is the name of the secret that stores the bootstrap data script.
+    /// dataSecretName is the name of the secret that stores the bootstrap data script.
     /// If nil, the Machine should remain in the Pending state.
     #[serde(
         default,
@@ -183,7 +203,7 @@ pub struct MachinePoolTemplateSpecBootstrap {
     pub data_secret_name: Option<String>,
 }
 
-/// ConfigRef is a reference to a bootstrap provider-specific resource
+/// configRef is a reference to a bootstrap provider-specific resource
 /// that holds configuration details. The reference is optional to
 /// allow users/operators to specify Bootstrap.DataSecretName without
 /// the need of a controller.
@@ -203,7 +223,6 @@ pub struct MachinePoolTemplateSpecBootstrapConfigRef {
     /// the event) or if no container name is specified "spec.containers[2]" (container with
     /// index 2 in this pod). This syntax is chosen only to have some well-defined way of
     /// referencing a part of an object.
-    /// TODO: this design is not final and this field is subject to change in the future.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "fieldPath")]
     pub field_path: Option<String>,
     /// Kind of the referent.
@@ -232,7 +251,7 @@ pub struct MachinePoolTemplateSpecBootstrapConfigRef {
     pub uid: Option<String>,
 }
 
-/// InfrastructureRef is a required reference to a custom resource
+/// infrastructureRef is a required reference to a custom resource
 /// offered by an infrastructure provider.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolTemplateSpecInfrastructureRef {
@@ -250,7 +269,6 @@ pub struct MachinePoolTemplateSpecInfrastructureRef {
     /// the event) or if no container name is specified "spec.containers[2]" (container with
     /// index 2 in this pod). This syntax is chosen only to have some well-defined way of
     /// referencing a part of an object.
-    /// TODO: this design is not final and this field is subject to change in the future.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "fieldPath")]
     pub field_path: Option<String>,
     /// Kind of the referent.
@@ -279,6 +297,16 @@ pub struct MachinePoolTemplateSpecInfrastructureRef {
     pub uid: Option<String>,
 }
 
+/// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct MachinePoolTemplateSpecReadinessGates {
+    /// conditionType refers to a positive polarity condition (status true means good) with matching type in the Machine's condition list.
+    /// If the conditions doesn't exist, it will be treated as unknown.
+    /// Note: Both Cluster API conditions or conditions added by 3rd party controllers can be used as readiness gates.
+    #[serde(rename = "conditionType")]
+    pub condition_type: String,
+}
+
 /// MachinePoolStatus defines the observed state of MachinePool.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolStatus {
@@ -289,50 +317,54 @@ pub struct MachinePoolStatus {
         rename = "availableReplicas"
     )]
     pub available_replicas: Option<i32>,
-    /// BootstrapReady is the state of the bootstrap provider.
+    /// bootstrapReady is the state of the bootstrap provider.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "bootstrapReady"
     )]
     pub bootstrap_ready: Option<bool>,
-    /// Conditions define the current service state of the MachinePool.
+    /// conditions define the current service state of the MachinePool.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conditions: Option<Vec<Condition>>,
-    /// FailureMessage indicates that there is a problem reconciling the state,
+    /// failureMessage indicates that there is a problem reconciling the state,
     /// and will be set to a descriptive error message.
+    ///
+    /// Deprecated: This field is deprecated and is going to be removed in the next apiVersion. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "failureMessage"
     )]
     pub failure_message: Option<String>,
-    /// FailureReason indicates that there is a problem reconciling the state, and
+    /// failureReason indicates that there is a problem reconciling the state, and
     /// will be set to a token value suitable for programmatic interpretation.
+    ///
+    /// Deprecated: This field is deprecated and is going to be removed in the next apiVersion. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "failureReason"
     )]
     pub failure_reason: Option<String>,
-    /// InfrastructureReady is the state of the infrastructure provider.
+    /// infrastructureReady is the state of the infrastructure provider.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "infrastructureReady"
     )]
     pub infrastructure_ready: Option<bool>,
-    /// NodeRefs will point to the corresponding Nodes if it they exist.
+    /// nodeRefs will point to the corresponding Nodes if it they exist.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "nodeRefs")]
     pub node_refs: Option<Vec<ObjectReference>>,
-    /// ObservedGeneration is the latest generation observed by the controller.
+    /// observedGeneration is the latest generation observed by the controller.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "observedGeneration"
     )]
     pub observed_generation: Option<i64>,
-    /// Phase represents the current phase of cluster actuation.
+    /// phase represents the current phase of cluster actuation.
     /// E.g. Pending, Running, Terminating, Failed etc.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub phase: Option<String>,
@@ -343,7 +375,7 @@ pub struct MachinePoolStatus {
         rename = "readyReplicas"
     )]
     pub ready_replicas: Option<i32>,
-    /// Replicas is the most recently observed number of replicas.
+    /// replicas is the most recently observed number of replicas.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replicas: Option<i32>,
     /// Total number of unavailable machine instances targeted by this machine pool.
@@ -351,10 +383,46 @@ pub struct MachinePoolStatus {
     /// the machine pool to have 100% available capacity. They may either
     /// be machine instances that are running but not yet available or machine instances
     /// that still have not been created.
+    ///
+    /// Deprecated: This field is deprecated and is going to be removed in the next apiVersion. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "unavailableReplicas"
     )]
     pub unavailable_replicas: Option<i32>,
+    /// v1beta2 groups all the fields that will be added or modified in MachinePool's status with the V1Beta2 version.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub v1beta2: Option<MachinePoolStatusV1beta2>,
+}
+
+/// v1beta2 groups all the fields that will be added or modified in MachinePool's status with the V1Beta2 version.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct MachinePoolStatusV1beta2 {
+    /// availableReplicas is the number of available replicas for this MachinePool. A machine is considered available when Machine's Available condition is true.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "availableReplicas"
+    )]
+    pub available_replicas: Option<i32>,
+    /// conditions represents the observations of a MachinePool's current state.
+    /// Known condition types are Available, BootstrapConfigReady, InfrastructureReady, MachinesReady, MachinesUpToDate,
+    /// ScalingUp, ScalingDown, Remediating, Deleting, Paused.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conditions: Option<Vec<Condition>>,
+    /// readyReplicas is the number of ready replicas for this MachinePool. A machine is considered ready when Machine's Ready condition is true.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "readyReplicas"
+    )]
+    pub ready_replicas: Option<i32>,
+    /// upToDateReplicas is the number of up-to-date replicas targeted by this MachinePool. A machine is considered up-to-date when Machine's UpToDate condition is true.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "upToDateReplicas"
+    )]
+    pub up_to_date_replicas: Option<i32>,
 }

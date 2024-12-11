@@ -24,19 +24,19 @@ use self::prelude::*;
 #[kube(derive = "Default")]
 #[kube(derive = "PartialEq")]
 pub struct IPAddressClaimSpec {
-    /// ClusterName is the name of the Cluster this object belongs to.
+    /// clusterName is the name of the Cluster this object belongs to.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "clusterName"
     )]
     pub cluster_name: Option<String>,
-    /// PoolRef is a reference to the pool from which an IP address should be created.
+    /// poolRef is a reference to the pool from which an IP address should be created.
     #[serde(rename = "poolRef")]
     pub pool_ref: IPAddressClaimPoolRef,
 }
 
-/// PoolRef is a reference to the pool from which an IP address should be created.
+/// poolRef is a reference to the pool from which an IP address should be created.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct IPAddressClaimPoolRef {
     /// APIGroup is the group for the resource being referenced.
@@ -53,28 +53,26 @@ pub struct IPAddressClaimPoolRef {
 /// IPAddressClaimStatus is the observed status of a IPAddressClaim.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct IPAddressClaimStatus {
-    /// AddressRef is a reference to the address that was created for this claim.
+    /// addressRef is a reference to the address that was created for this claim.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "addressRef"
     )]
     pub address_ref: Option<IPAddressClaimStatusAddressRef>,
-    /// Conditions summarises the current state of the IPAddressClaim
+    /// conditions summarises the current state of the IPAddressClaim
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conditions: Option<Vec<Condition>>,
 }
 
-/// AddressRef is a reference to the address that was created for this claim.
+/// addressRef is a reference to the address that was created for this claim.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct IPAddressClaimStatusAddressRef {
     /// Name of the referent.
     /// This field is effectively required, but due to backwards compatibility is
     /// allowed to be empty. Instances of this type with an empty value here are
     /// almost certainly wrong.
-    /// TODO: Add other useful fields. apiVersion, kind, uid?
     /// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-    /// TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 }
