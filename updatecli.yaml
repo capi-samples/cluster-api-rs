@@ -9,7 +9,7 @@ sources:
       token: '{{ requiredEnv "GITHUB_TOKEN" }}'
       versionFilter:
         kind: semver
-        pattern: =>v1.9.3
+        pattern: =>v1.9.4
 targets:
   versionFile:
     name: Bump cluster-api version
