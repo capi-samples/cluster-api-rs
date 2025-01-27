@@ -21,4 +21,6 @@ updates:
     groups:
       api:
         patterns:
-          - "*"
+          - "kube*"
+          - "k8s-openapi"
+          - "http*"
