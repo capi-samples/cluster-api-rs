@@ -4,6 +4,19 @@
   serde = "1.0.204"
   serde_json = "1.0.122"
 
+  [dependencies.thiserror]
+    optional = true
+    version = "2.0.11"
+
+  [dependencies.jsonptr]
+    optional = true
+    version = "0.7.1"
+
+  [dependencies.semver]
+    optional = true
+    features = ["serde"]
+    version = "1.0"
+
   [dependencies.k8s-openapi]
     features = ["schemars", "latest"]
     version = "0.24.0"
@@ -20,3 +33,6 @@
   readme = "README.md"
   repository = "https://github.com/capi-samples/cluster-api-rs"
   version = "1.9.5"
+
+[features]
+contract = ["dep:semver", "dep:jsonptr", "dep:thiserror"]
