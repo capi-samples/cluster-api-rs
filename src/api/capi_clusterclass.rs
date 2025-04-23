@@ -14,7 +14,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// ClusterClassSpec describes the desired state of the ClusterClass.
+/// spec is the desired state of ClusterClass.
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 #[kube(
     group = "cluster.x-k8s.io",
@@ -27,6 +27,17 @@ use self::prelude::*;
 #[kube(derive = "Default")]
 #[kube(derive = "PartialEq")]
 pub struct ClusterClassSpec {
+    /// availabilityGates specifies additional conditions to include when evaluating Cluster Available condition.
+    ///
+    /// NOTE: this field is considered only for computing v1beta2 conditions.
+    /// NOTE: If a Cluster is using this ClusterClass, and this Cluster defines a custom list of availabilityGates,
+    /// such list overrides availabilityGates defined in this field.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "availabilityGates"
+    )]
+    pub availability_gates: Option<Vec<ClusterClassAvailabilityGates>>,
     /// controlPlane is a reference to a local struct that holds the details
     /// for provisioning the Control Plane for the Cluster.
     #[serde(
@@ -42,6 +53,13 @@ pub struct ClusterClassSpec {
     /// of the template to an infrastructure cluster.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub infrastructure: Option<ClusterClassInfrastructure>,
+    /// infrastructureNamingStrategy allows changing the naming pattern used when creating the infrastructure object.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "infrastructureNamingStrategy"
+    )]
+    pub infrastructure_naming_strategy: Option<ClusterClassInfrastructureNamingStrategy>,
     /// patches defines the patches which are applied to customize
     /// referenced templates of a ClusterClass.
     /// Note: Patches will be applied in the order of the array.
@@ -56,6 +74,30 @@ pub struct ClusterClassSpec {
     /// the worker nodes of the cluster.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub workers: Option<ClusterClassWorkers>,
+}
+
+/// ClusterAvailabilityGate contains the type of a Cluster condition to be used as availability gate.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct ClusterClassAvailabilityGates {
+    /// conditionType refers to a condition with matching type in the Cluster's condition list.
+    /// If the conditions doesn't exist, it will be treated as unknown.
+    /// Note: Both Cluster API conditions or conditions added by 3rd party controllers can be used as availability gates.
+    #[serde(rename = "conditionType")]
+    pub condition_type: String,
+    /// polarity of the conditionType specified in this availabilityGate.
+    /// Valid values are Positive, Negative and omitted.
+    /// When omitted, the default behaviour will be Positive.
+    /// A positive polarity means that the condition should report a true status under normal conditions.
+    /// A negative polarity means that the condition should report a false status under normal conditions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub polarity: Option<ClusterClassAvailabilityGatesPolarity>,
+}
+
+/// ClusterAvailabilityGate contains the type of a Cluster condition to be used as availability gate.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum ClusterClassAvailabilityGatesPolarity {
+    Positive,
+    Negative,
 }
 
 /// controlPlane is a reference to a local struct that holds the details
@@ -127,6 +169,22 @@ pub struct ClusterClassControlPlane {
         rename = "nodeVolumeDetachTimeout"
     )]
     pub node_volume_detach_timeout: Option<String>,
+    /// readinessGates specifies additional conditions to include when evaluating Machine Ready condition.
+    ///
+    /// This field can be used e.g. to instruct the machine controller to include in the computation for Machine's ready
+    /// computation a condition, managed by an external controllers, reporting the status of special software/hardware installed on the Machine.
+    ///
+    /// NOTE: This field is considered only for computing v1beta2 conditions.
+    /// NOTE: If a Cluster defines a custom list of readinessGates for the control plane,
+    /// such list overrides readinessGates defined in this field.
+    /// NOTE: Specific control plane provider implementations might automatically extend the list of readinessGates;
+    /// e.g. the kubeadm control provider adds ReadinessGates for the APIServerPodHealthy, SchedulerPodHealthy conditions, etc.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "readinessGates"
+    )]
+    pub readiness_gates: Option<Vec<ClusterClassControlPlaneReadinessGates>>,
     /// ref is a required reference to a custom resource
     /// offered by a provider.
     #[serde(rename = "ref")]
@@ -138,7 +196,8 @@ pub struct ClusterClassControlPlane {
 /// referenced above is Machine based and supports setting replicas.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct ClusterClassControlPlaneMachineHealthCheck {
-    /// Any further remediation is only allowed if at most "MaxUnhealthy" machines selected by
+    /// maxUnhealthy specifies the maximum number of unhealthy machines allowed.
+    /// Any further remediation is only allowed if at most "maxUnhealthy" machines selected by
     /// "selector" are not healthy.
     #[serde(
         default,
@@ -186,8 +245,9 @@ pub struct ClusterClassControlPlaneMachineHealthCheck {
     )]
     pub unhealthy_conditions:
         Option<Vec<ClusterClassControlPlaneMachineHealthCheckUnhealthyConditions>>,
+    /// unhealthyRange specifies the range of unhealthy machines allowed.
     /// Any further remediation is only allowed if the number of machines selected by "selector" as not healthy
-    /// is within the range of "UnhealthyRange". Takes precedence over MaxUnhealthy.
+    /// is within the range of "unhealthyRange". Takes precedence over maxUnhealthy.
     /// Eg. "[3-5]" - This means that remediation will be allowed only when:
     /// (a) there are at least 3 unhealthy machines (and)
     /// (b) there are at most 5 unhealthy machines
@@ -254,8 +314,14 @@ pub struct ClusterClassControlPlaneMachineHealthCheckRemediationTemplate {
 /// status for at least the timeout value, a node is considered unhealthy.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct ClusterClassControlPlaneMachineHealthCheckUnhealthyConditions {
+    /// status of the condition, one of True, False, Unknown.
     pub status: String,
+    /// timeout is the duration that a node must be in a given status for,
+    /// after which the node is considered unhealthy.
+    /// For example, with a value of "1h", the node must match the status
+    /// for at least 1 hour before being considered unhealthy.
     pub timeout: String,
+    /// type of Node condition
     #[serde(rename = "type")]
     pub r#type: String,
 }
@@ -334,7 +400,7 @@ pub struct ClusterClassControlPlaneMetadata {
     /// More info: http://kubernetes.io/docs/user-guide/annotations
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<BTreeMap<String, String>>,
-    /// Map of string keys and values that can be used to organize and categorize
+    /// labels is a map of string keys and values that can be used to organize and categorize
     /// (scope and select) objects. May match selectors of replication controllers
     /// and services.
     /// More info: http://kubernetes.io/docs/user-guide/labels
@@ -354,6 +420,30 @@ pub struct ClusterClassControlPlaneNamingStrategy {
     /// * `.random`: A random alphanumeric string, without vowels, of length 5.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub template: Option<String>,
+}
+
+/// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct ClusterClassControlPlaneReadinessGates {
+    /// conditionType refers to a condition with matching type in the Machine's condition list.
+    /// If the conditions doesn't exist, it will be treated as unknown.
+    /// Note: Both Cluster API conditions or conditions added by 3rd party controllers can be used as readiness gates.
+    #[serde(rename = "conditionType")]
+    pub condition_type: String,
+    /// polarity of the conditionType specified in this readinessGate.
+    /// Valid values are Positive, Negative and omitted.
+    /// When omitted, the default behaviour will be Positive.
+    /// A positive polarity means that the condition should report a true status under normal conditions.
+    /// A negative polarity means that the condition should report a false status under normal conditions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub polarity: Option<ClusterClassControlPlaneReadinessGatesPolarity>,
+}
+
+/// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum ClusterClassControlPlaneReadinessGatesPolarity {
+    Positive,
+    Negative,
 }
 
 /// ref is a required reference to a custom resource
@@ -461,6 +551,20 @@ pub struct ClusterClassInfrastructureRef {
     pub uid: Option<String>,
 }
 
+/// infrastructureNamingStrategy allows changing the naming pattern used when creating the infrastructure object.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct ClusterClassInfrastructureNamingStrategy {
+    /// template defines the template to use for generating the name of the Infrastructure object.
+    /// If not defined, it will fallback to `{{ .cluster.name }}-{{ .random }}`.
+    /// If the templated string exceeds 63 characters, it will be trimmed to 58 characters and will
+    /// get concatenated with a random suffix of length 5.
+    /// The templating mechanism provides the following arguments:
+    /// * `.cluster.name`: The name of the cluster object.
+    /// * `.random`: A random alphanumeric string, without vowels, of length 5.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
+}
+
 /// ClusterClassPatch defines a patch which is applied to customize the referenced templates.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct ClusterClassPatches {
@@ -504,7 +608,7 @@ pub struct ClusterClassPatchesDefinitions {
 pub struct ClusterClassPatchesDefinitionsJsonPatches {
     /// op defines the operation of the patch.
     /// Note: Only `add`, `replace` and `remove` are supported.
-    pub op: String,
+    pub op: ClusterClassPatchesDefinitionsJsonPatchesOp,
     /// path defines the path of the patch.
     /// Note: Only the spec of a template can be patched, thus the path has to start with /spec/.
     /// Note: For now the only allowed array modifications are `append` and `prepend`, i.e.:
@@ -525,6 +629,17 @@ pub struct ClusterClassPatchesDefinitionsJsonPatches {
     /// operations. Only one of them is allowed to be set at the same time.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "valueFrom")]
     pub value_from: Option<ClusterClassPatchesDefinitionsJsonPatchesValueFrom>,
+}
+
+/// JSONPatch defines a JSON patch.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum ClusterClassPatchesDefinitionsJsonPatchesOp {
+    #[serde(rename = "add")]
+    Add,
+    #[serde(rename = "replace")]
+    Replace,
+    #[serde(rename = "remove")]
+    Remove,
 }
 
 /// valueFrom defines the value of the patch.
@@ -679,7 +794,7 @@ pub struct ClusterClassVariablesMetadata {
     /// They are not queryable.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<BTreeMap<String, String>>,
-    /// Map of string keys and values that can be used to organize and categorize
+    /// labels is a map of string keys and values that can be used to organize and categorize
     /// (scope and select) variables.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub labels: Option<BTreeMap<String, String>>,
@@ -835,7 +950,7 @@ pub struct ClusterClassVariablesSchemaOpenApiv3Schema {
     /// type is the type of the variable.
     /// Valid values are: object, array, string, integer, number or boolean.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "type")]
-    pub r#type: Option<String>,
+    pub r#type: Option<ClusterClassVariablesSchemaOpenApiv3SchemaType>,
     /// uniqueItems specifies if items in an array must be unique.
     /// NOTE: Can only be set if type is array.
     #[serde(
@@ -888,6 +1003,25 @@ pub struct ClusterClassVariablesSchemaOpenApiv3Schema {
         rename = "x-metadata"
     )]
     pub x_metadata: Option<ClusterClassVariablesSchemaOpenApiv3SchemaXMetadata>,
+}
+
+/// openAPIV3Schema defines the schema of a variable via OpenAPI v3
+/// schema. The schema is a subset of the schema used in
+/// Kubernetes CRDs.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum ClusterClassVariablesSchemaOpenApiv3SchemaType {
+    #[serde(rename = "object")]
+    Object,
+    #[serde(rename = "array")]
+    Array,
+    #[serde(rename = "string")]
+    String,
+    #[serde(rename = "integer")]
+    Integer,
+    #[serde(rename = "number")]
+    Number,
+    #[serde(rename = "boolean")]
+    Boolean,
 }
 
 /// ValidationRule describes a validation rule written in the CEL expression language.
@@ -998,7 +1132,7 @@ pub struct ClusterClassVariablesSchemaOpenApiv3SchemaXMetadata {
     /// They are not queryable.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<BTreeMap<String, String>>,
-    /// Map of string keys and values that can be used to organize and categorize
+    /// labels is a map of string keys and values that can be used to organize and categorize
     /// (scope and select) variables.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub labels: Option<BTreeMap<String, String>>,
@@ -1051,7 +1185,7 @@ pub struct ClusterClassWorkersMachineDeployments {
         rename = "machineHealthCheck"
     )]
     pub machine_health_check: Option<ClusterClassWorkersMachineDeploymentsMachineHealthCheck>,
-    /// Minimum number of seconds for which a newly created machine should
+    /// minReadySeconds is the minimum number of seconds for which a newly created machine should
     /// be ready.
     /// Defaults to 0 (machine will be considered available as soon as it
     /// is ready)
@@ -1098,7 +1232,21 @@ pub struct ClusterClassWorkersMachineDeployments {
         rename = "nodeVolumeDetachTimeout"
     )]
     pub node_volume_detach_timeout: Option<String>,
-    /// The deployment strategy to use to replace existing machines with
+    /// readinessGates specifies additional conditions to include when evaluating Machine Ready condition.
+    ///
+    /// This field can be used e.g. to instruct the machine controller to include in the computation for Machine's ready
+    /// computation a condition, managed by an external controllers, reporting the status of special software/hardware installed on the Machine.
+    ///
+    /// NOTE: This field is considered only for computing v1beta2 conditions.
+    /// NOTE: If a Cluster defines a custom list of readinessGates for a MachineDeployment using this MachineDeploymentClass,
+    /// such list overrides readinessGates defined in this field.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "readinessGates"
+    )]
+    pub readiness_gates: Option<Vec<ClusterClassWorkersMachineDeploymentsReadinessGates>>,
+    /// strategy is the deployment strategy to use to replace existing machines with
     /// new ones.
     /// NOTE: This value can be overridden while defining a Cluster.Topology using this MachineDeploymentClass.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1111,7 +1259,8 @@ pub struct ClusterClassWorkersMachineDeployments {
 /// machineHealthCheck defines a MachineHealthCheck for this MachineDeploymentClass.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct ClusterClassWorkersMachineDeploymentsMachineHealthCheck {
-    /// Any further remediation is only allowed if at most "MaxUnhealthy" machines selected by
+    /// maxUnhealthy specifies the maximum number of unhealthy machines allowed.
+    /// Any further remediation is only allowed if at most "maxUnhealthy" machines selected by
     /// "selector" are not healthy.
     #[serde(
         default,
@@ -1159,8 +1308,9 @@ pub struct ClusterClassWorkersMachineDeploymentsMachineHealthCheck {
     )]
     pub unhealthy_conditions:
         Option<Vec<ClusterClassWorkersMachineDeploymentsMachineHealthCheckUnhealthyConditions>>,
+    /// unhealthyRange specifies the range of unhealthy machines allowed.
     /// Any further remediation is only allowed if the number of machines selected by "selector" as not healthy
-    /// is within the range of "UnhealthyRange". Takes precedence over MaxUnhealthy.
+    /// is within the range of "unhealthyRange". Takes precedence over maxUnhealthy.
     /// Eg. "[3-5]" - This means that remediation will be allowed only when:
     /// (a) there are at least 3 unhealthy machines (and)
     /// (b) there are at most 5 unhealthy machines
@@ -1227,8 +1377,14 @@ pub struct ClusterClassWorkersMachineDeploymentsMachineHealthCheckRemediationTem
 /// status for at least the timeout value, a node is considered unhealthy.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct ClusterClassWorkersMachineDeploymentsMachineHealthCheckUnhealthyConditions {
+    /// status of the condition, one of True, False, Unknown.
     pub status: String,
+    /// timeout is the duration that a node must be in a given status for,
+    /// after which the node is considered unhealthy.
+    /// For example, with a value of "1h", the node must match the status
+    /// for at least 1 hour before being considered unhealthy.
     pub timeout: String,
+    /// type of Node condition
     #[serde(rename = "type")]
     pub r#type: String,
 }
@@ -1248,7 +1404,31 @@ pub struct ClusterClassWorkersMachineDeploymentsNamingStrategy {
     pub template: Option<String>,
 }
 
-/// The deployment strategy to use to replace existing machines with
+/// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct ClusterClassWorkersMachineDeploymentsReadinessGates {
+    /// conditionType refers to a condition with matching type in the Machine's condition list.
+    /// If the conditions doesn't exist, it will be treated as unknown.
+    /// Note: Both Cluster API conditions or conditions added by 3rd party controllers can be used as readiness gates.
+    #[serde(rename = "conditionType")]
+    pub condition_type: String,
+    /// polarity of the conditionType specified in this readinessGate.
+    /// Valid values are Positive, Negative and omitted.
+    /// When omitted, the default behaviour will be Positive.
+    /// A positive polarity means that the condition should report a true status under normal conditions.
+    /// A negative polarity means that the condition should report a false status under normal conditions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub polarity: Option<ClusterClassWorkersMachineDeploymentsReadinessGatesPolarity>,
+}
+
+/// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum ClusterClassWorkersMachineDeploymentsReadinessGatesPolarity {
+    Positive,
+    Negative,
+}
+
+/// strategy is the deployment strategy to use to replace existing machines with
 /// new ones.
 /// NOTE: This value can be overridden while defining a Cluster.Topology using this MachineDeploymentClass.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
@@ -1257,7 +1437,7 @@ pub struct ClusterClassWorkersMachineDeploymentsStrategy {
     /// and how remediating operations should occur during the lifecycle of the dependant MachineSets.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub remediation: Option<ClusterClassWorkersMachineDeploymentsStrategyRemediation>,
-    /// Rolling update config params. Present only if
+    /// rollingUpdate is the rolling update config params. Present only if
     /// MachineDeploymentStrategyType = RollingUpdate.
     #[serde(
         default,
@@ -1297,7 +1477,7 @@ pub struct ClusterClassWorkersMachineDeploymentsStrategyRemediation {
     pub max_in_flight: Option<IntOrString>,
 }
 
-/// Rolling update config params. Present only if
+/// rollingUpdate is the rolling update config params. Present only if
 /// MachineDeploymentStrategyType = RollingUpdate.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct ClusterClassWorkersMachineDeploymentsStrategyRollingUpdate {
@@ -1311,7 +1491,7 @@ pub struct ClusterClassWorkersMachineDeploymentsStrategyRollingUpdate {
     )]
     pub delete_policy:
         Option<ClusterClassWorkersMachineDeploymentsStrategyRollingUpdateDeletePolicy>,
-    /// The maximum number of machines that can be scheduled above the
+    /// maxSurge is the maximum number of machines that can be scheduled above the
     /// desired number of machines.
     /// Value can be an absolute number (ex: 5) or a percentage of
     /// desired machines (ex: 10%).
@@ -1326,7 +1506,7 @@ pub struct ClusterClassWorkersMachineDeploymentsStrategyRollingUpdate {
     /// at any time during the update is at most 130% of desired machines.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxSurge")]
     pub max_surge: Option<IntOrString>,
-    /// The maximum number of machines that can be unavailable during the update.
+    /// maxUnavailable is the maximum number of machines that can be unavailable during the update.
     /// Value can be an absolute number (ex: 5) or a percentage of desired
     /// machines (ex: 10%).
     /// Absolute number is calculated from percentage by rounding down.
@@ -1346,7 +1526,7 @@ pub struct ClusterClassWorkersMachineDeploymentsStrategyRollingUpdate {
     pub max_unavailable: Option<IntOrString>,
 }
 
-/// Rolling update config params. Present only if
+/// rollingUpdate is the rolling update config params. Present only if
 /// MachineDeploymentStrategyType = RollingUpdate.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum ClusterClassWorkersMachineDeploymentsStrategyRollingUpdateDeletePolicy {
@@ -1355,7 +1535,7 @@ pub enum ClusterClassWorkersMachineDeploymentsStrategyRollingUpdateDeletePolicy 
     Oldest,
 }
 
-/// The deployment strategy to use to replace existing machines with
+/// strategy is the deployment strategy to use to replace existing machines with
 /// new ones.
 /// NOTE: This value can be overridden while defining a Cluster.Topology using this MachineDeploymentClass.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -1502,7 +1682,7 @@ pub struct ClusterClassWorkersMachineDeploymentsTemplateMetadata {
     /// More info: http://kubernetes.io/docs/user-guide/annotations
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<BTreeMap<String, String>>,
-    /// Map of string keys and values that can be used to organize and categorize
+    /// labels is a map of string keys and values that can be used to organize and categorize
     /// (scope and select) objects. May match selectors of replication controllers
     /// and services.
     /// More info: http://kubernetes.io/docs/user-guide/labels
@@ -1527,7 +1707,7 @@ pub struct ClusterClassWorkersMachinePools {
         rename = "failureDomains"
     )]
     pub failure_domains: Option<Vec<String>>,
-    /// Minimum number of seconds for which a newly created machine pool should
+    /// minReadySeconds is the minimum number of seconds for which a newly created machine pool should
     /// be ready.
     /// Defaults to 0 (machine will be considered available as soon as it
     /// is ready)
@@ -1732,7 +1912,7 @@ pub struct ClusterClassWorkersMachinePoolsTemplateMetadata {
     /// More info: http://kubernetes.io/docs/user-guide/annotations
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<BTreeMap<String, String>>,
-    /// Map of string keys and values that can be used to organize and categorize
+    /// labels is a map of string keys and values that can be used to organize and categorize
     /// (scope and select) objects. May match selectors of replication controllers
     /// and services.
     /// More info: http://kubernetes.io/docs/user-guide/labels
@@ -1740,7 +1920,7 @@ pub struct ClusterClassWorkersMachinePoolsTemplateMetadata {
     pub labels: Option<BTreeMap<String, String>>,
 }
 
-/// ClusterClassStatus defines the observed state of the ClusterClass.
+/// status is the observed state of ClusterClass.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct ClusterClassStatus {
     /// conditions defines current observed state of the ClusterClass.
@@ -1821,7 +2001,7 @@ pub struct ClusterClassStatusVariablesDefinitionsMetadata {
     /// They are not queryable.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<BTreeMap<String, String>>,
-    /// Map of string keys and values that can be used to organize and categorize
+    /// labels is a map of string keys and values that can be used to organize and categorize
     /// (scope and select) variables.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub labels: Option<BTreeMap<String, String>>,
@@ -1977,7 +2157,7 @@ pub struct ClusterClassStatusVariablesDefinitionsSchemaOpenApiv3Schema {
     /// type is the type of the variable.
     /// Valid values are: object, array, string, integer, number or boolean.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "type")]
-    pub r#type: Option<String>,
+    pub r#type: Option<ClusterClassStatusVariablesDefinitionsSchemaOpenApiv3SchemaType>,
     /// uniqueItems specifies if items in an array must be unique.
     /// NOTE: Can only be set if type is array.
     #[serde(
@@ -2031,6 +2211,25 @@ pub struct ClusterClassStatusVariablesDefinitionsSchemaOpenApiv3Schema {
         rename = "x-metadata"
     )]
     pub x_metadata: Option<ClusterClassStatusVariablesDefinitionsSchemaOpenApiv3SchemaXMetadata>,
+}
+
+/// openAPIV3Schema defines the schema of a variable via OpenAPI v3
+/// schema. The schema is a subset of the schema used in
+/// Kubernetes CRDs.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum ClusterClassStatusVariablesDefinitionsSchemaOpenApiv3SchemaType {
+    #[serde(rename = "object")]
+    Object,
+    #[serde(rename = "array")]
+    Array,
+    #[serde(rename = "string")]
+    String,
+    #[serde(rename = "integer")]
+    Integer,
+    #[serde(rename = "number")]
+    Number,
+    #[serde(rename = "boolean")]
+    Boolean,
 }
 
 /// ValidationRule describes a validation rule written in the CEL expression language.
@@ -2143,7 +2342,7 @@ pub struct ClusterClassStatusVariablesDefinitionsSchemaOpenApiv3SchemaXMetadata 
     /// They are not queryable.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<BTreeMap<String, String>>,
-    /// Map of string keys and values that can be used to organize and categorize
+    /// labels is a map of string keys and values that can be used to organize and categorize
     /// (scope and select) variables.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub labels: Option<BTreeMap<String, String>>,

@@ -10,7 +10,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// ClusterResourceSetBindingSpec defines the desired state of ClusterResourceSetBinding.
+/// spec is the desired state of ClusterResourceSetBinding.
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[kube(
     group = "addons.cluster.x-k8s.io",

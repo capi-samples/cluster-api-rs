@@ -14,7 +14,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// MachineDeploymentSpec defines the desired state of MachineDeployment.
+/// spec is the desired state of MachineDeployment.
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 #[kube(
     group = "cluster.x-k8s.io",
@@ -30,6 +30,14 @@ pub struct MachineDeploymentSpec {
     /// clusterName is the name of the Cluster this object belongs to.
     #[serde(rename = "clusterName")]
     pub cluster_name: String,
+    /// machineNamingStrategy allows changing the naming pattern used when creating Machines.
+    /// Note: InfraMachines & BootstrapConfigs will use the same name as the corresponding Machines.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "machineNamingStrategy"
+    )]
+    pub machine_naming_strategy: Option<MachineDeploymentMachineNamingStrategy>,
     /// minReadySeconds is the minimum number of seconds for which a Node for a newly created machine should be ready before considering the replica available.
     /// Defaults to 0 (machine will be considered available as soon as the Node is ready)
     #[serde(
@@ -38,10 +46,10 @@ pub struct MachineDeploymentSpec {
         rename = "minReadySeconds"
     )]
     pub min_ready_seconds: Option<i32>,
-    /// Indicates that the deployment is paused.
+    /// paused indicates that the deployment is paused.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub paused: Option<bool>,
-    /// The maximum time in seconds for a deployment to make progress before it
+    /// progressDeadlineSeconds is the maximum time in seconds for a deployment to make progress before it
     /// is considered to be failed. The deployment controller will continue to
     /// process failed deployments and a condition with a ProgressDeadlineExceeded
     /// reason will be surfaced in the deployment status. Note that progress will
@@ -54,7 +62,7 @@ pub struct MachineDeploymentSpec {
         rename = "progressDeadlineSeconds"
     )]
     pub progress_deadline_seconds: Option<i32>,
-    /// Number of desired machines.
+    /// replicas is the number of desired machines.
     /// This is a pointer to distinguish between explicit zero and not specified.
     ///
     /// Defaults to:
@@ -73,7 +81,7 @@ pub struct MachineDeploymentSpec {
     ///   should be later controlled by the autoscaler
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replicas: Option<i32>,
-    /// The number of old MachineSets to retain to allow rollback.
+    /// revisionHistoryLimit is the number of old MachineSets to retain to allow rollback.
     /// This is a pointer to distinguish between explicit zero and not specified.
     /// Defaults to 1.
     ///
@@ -96,11 +104,11 @@ pub struct MachineDeploymentSpec {
         rename = "rolloutAfter"
     )]
     pub rollout_after: Option<String>,
-    /// Label selector for machines. Existing MachineSets whose machines are
+    /// selector is the label selector for machines. Existing MachineSets whose machines are
     /// selected by this will be the ones affected by this deployment.
     /// It must match the machine template's labels.
     pub selector: MachineDeploymentSelector,
-    /// The deployment strategy to use to replace existing machines with
+    /// strategy is the deployment strategy to use to replace existing machines with
     /// new ones.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub strategy: Option<MachineDeploymentStrategy>,
@@ -108,7 +116,31 @@ pub struct MachineDeploymentSpec {
     pub template: MachineDeploymentTemplate,
 }
 
-/// Label selector for machines. Existing MachineSets whose machines are
+/// machineNamingStrategy allows changing the naming pattern used when creating Machines.
+/// Note: InfraMachines & BootstrapConfigs will use the same name as the corresponding Machines.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct MachineDeploymentMachineNamingStrategy {
+    /// template defines the template to use for generating the names of the
+    /// Machine objects.
+    /// If not defined, it will fallback to `{{ .machineSet.name }}-{{ .random }}`.
+    /// If the generated name string exceeds 63 characters, it will be trimmed to
+    /// 58 characters and will
+    /// get concatenated with a random suffix of length 5.
+    /// Length of the template string must not exceed 256 characters.
+    /// The template allows the following variables `.cluster.name`,
+    /// `.machineSet.name` and `.random`.
+    /// The variable `.cluster.name` retrieves the name of the cluster object
+    /// that owns the Machines being created.
+    /// The variable `.machineSet.name` retrieves the name of the MachineSet
+    /// object that owns the Machines being created.
+    /// The variable `.random` is substituted with random alphanumeric string,
+    /// without vowels, of length 5. This variable is required part of the
+    /// template. If not provided, validation will fail.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
+}
+
+/// selector is the label selector for machines. Existing MachineSets whose machines are
 /// selected by this will be the ones affected by this deployment.
 /// It must match the machine template's labels.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
@@ -148,7 +180,7 @@ pub struct MachineDeploymentSelectorMatchExpressions {
     pub values: Option<Vec<String>>,
 }
 
-/// The deployment strategy to use to replace existing machines with
+/// strategy is the deployment strategy to use to replace existing machines with
 /// new ones.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineDeploymentStrategy {
@@ -156,7 +188,7 @@ pub struct MachineDeploymentStrategy {
     /// and how remediating operations should occur during the lifecycle of the dependant MachineSets.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub remediation: Option<MachineDeploymentStrategyRemediation>,
-    /// Rolling update config params. Present only if
+    /// rollingUpdate is the rolling update config params. Present only if
     /// MachineDeploymentStrategyType = RollingUpdate.
     #[serde(
         default,
@@ -196,7 +228,7 @@ pub struct MachineDeploymentStrategyRemediation {
     pub max_in_flight: Option<IntOrString>,
 }
 
-/// Rolling update config params. Present only if
+/// rollingUpdate is the rolling update config params. Present only if
 /// MachineDeploymentStrategyType = RollingUpdate.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineDeploymentStrategyRollingUpdate {
@@ -209,7 +241,7 @@ pub struct MachineDeploymentStrategyRollingUpdate {
         rename = "deletePolicy"
     )]
     pub delete_policy: Option<MachineDeploymentStrategyRollingUpdateDeletePolicy>,
-    /// The maximum number of machines that can be scheduled above the
+    /// maxSurge is the maximum number of machines that can be scheduled above the
     /// desired number of machines.
     /// Value can be an absolute number (ex: 5) or a percentage of
     /// desired machines (ex: 10%).
@@ -224,7 +256,7 @@ pub struct MachineDeploymentStrategyRollingUpdate {
     /// at any time during the update is at most 130% of desired machines.
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxSurge")]
     pub max_surge: Option<IntOrString>,
-    /// The maximum number of machines that can be unavailable during the update.
+    /// maxUnavailable is the maximum number of machines that can be unavailable during the update.
     /// Value can be an absolute number (ex: 5) or a percentage of desired
     /// machines (ex: 10%).
     /// Absolute number is calculated from percentage by rounding down.
@@ -244,7 +276,7 @@ pub struct MachineDeploymentStrategyRollingUpdate {
     pub max_unavailable: Option<IntOrString>,
 }
 
-/// Rolling update config params. Present only if
+/// rollingUpdate is the rolling update config params. Present only if
 /// MachineDeploymentStrategyType = RollingUpdate.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum MachineDeploymentStrategyRollingUpdateDeletePolicy {
@@ -253,7 +285,7 @@ pub enum MachineDeploymentStrategyRollingUpdateDeletePolicy {
     Oldest,
 }
 
-/// The deployment strategy to use to replace existing machines with
+/// strategy is the deployment strategy to use to replace existing machines with
 /// new ones.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum MachineDeploymentStrategyType {
@@ -264,17 +296,17 @@ pub enum MachineDeploymentStrategyType {
 /// template describes the machines that will be created.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineDeploymentTemplate {
-    /// Standard object's metadata.
+    /// metadata is the standard object's metadata.
     /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<MachineDeploymentTemplateMetadata>,
-    /// Specification of the desired behavior of the machine.
+    /// spec is the specification of the desired behavior of the machine.
     /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spec: Option<MachineDeploymentTemplateSpec>,
 }
 
-/// Standard object's metadata.
+/// metadata is the standard object's metadata.
 /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineDeploymentTemplateMetadata {
@@ -284,7 +316,7 @@ pub struct MachineDeploymentTemplateMetadata {
     /// More info: http://kubernetes.io/docs/user-guide/annotations
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<BTreeMap<String, String>>,
-    /// Map of string keys and values that can be used to organize and categorize
+    /// labels is a map of string keys and values that can be used to organize and categorize
     /// (scope and select) objects. May match selectors of replication controllers
     /// and services.
     /// More info: http://kubernetes.io/docs/user-guide/labels
@@ -292,7 +324,7 @@ pub struct MachineDeploymentTemplateMetadata {
     pub labels: Option<BTreeMap<String, String>>,
 }
 
-/// Specification of the desired behavior of the machine.
+/// spec is the specification of the desired behavior of the machine.
 /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineDeploymentTemplateSpec {
@@ -499,17 +531,31 @@ pub struct MachineDeploymentTemplateSpecInfrastructureRef {
 /// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineDeploymentTemplateSpecReadinessGates {
-    /// conditionType refers to a positive polarity condition (status true means good) with matching type in the Machine's condition list.
+    /// conditionType refers to a condition with matching type in the Machine's condition list.
     /// If the conditions doesn't exist, it will be treated as unknown.
     /// Note: Both Cluster API conditions or conditions added by 3rd party controllers can be used as readiness gates.
     #[serde(rename = "conditionType")]
     pub condition_type: String,
+    /// polarity of the conditionType specified in this readinessGate.
+    /// Valid values are Positive, Negative and omitted.
+    /// When omitted, the default behaviour will be Positive.
+    /// A positive polarity means that the condition should report a true status under normal conditions.
+    /// A negative polarity means that the condition should report a false status under normal conditions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub polarity: Option<MachineDeploymentTemplateSpecReadinessGatesPolarity>,
 }
 
-/// MachineDeploymentStatus defines the observed state of MachineDeployment.
+/// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum MachineDeploymentTemplateSpecReadinessGatesPolarity {
+    Positive,
+    Negative,
+}
+
+/// status is the observed state of MachineDeployment.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineDeploymentStatus {
-    /// Total number of available machines (ready for at least minReadySeconds)
+    /// availableReplicas is the total number of available machines (ready for at least minReadySeconds)
     /// targeted by this deployment.
     #[serde(
         default,
@@ -520,7 +566,7 @@ pub struct MachineDeploymentStatus {
     /// conditions defines current service state of the MachineDeployment.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conditions: Option<Vec<Condition>>,
-    /// The generation observed by the deployment controller.
+    /// observedGeneration is the generation observed by the deployment controller.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -529,15 +575,15 @@ pub struct MachineDeploymentStatus {
     pub observed_generation: Option<i64>,
     /// phase represents the current phase of a MachineDeployment (ScalingUp, ScalingDown, Running, Failed, or Unknown).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub phase: Option<String>,
-    /// Total number of ready machines targeted by this deployment.
+    pub phase: Option<MachineDeploymentStatusPhase>,
+    /// readyReplicas is the total number of ready machines targeted by this deployment.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "readyReplicas"
     )]
     pub ready_replicas: Option<i32>,
-    /// Total number of non-terminated machines targeted by this deployment
+    /// replicas is the total number of non-terminated machines targeted by this deployment
     /// (their labels match the selector).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replicas: Option<i32>,
@@ -546,7 +592,7 @@ pub struct MachineDeploymentStatus {
     /// More info about label selectors: http://kubernetes.io/docs/user-guide/labels#label-selectors
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selector: Option<String>,
-    /// Total number of unavailable machines targeted by this deployment.
+    /// unavailableReplicas is the total number of unavailable machines targeted by this deployment.
     /// This is the total number of machines that are still required for
     /// the deployment to have 100% available capacity. They may either
     /// be machines that are running but not yet available or machines
@@ -559,7 +605,7 @@ pub struct MachineDeploymentStatus {
         rename = "unavailableReplicas"
     )]
     pub unavailable_replicas: Option<i32>,
-    /// Total number of non-terminated machines targeted by this deployment
+    /// updatedReplicas is the total number of non-terminated machines targeted by this deployment
     /// that have the desired template spec.
     #[serde(
         default,
@@ -570,6 +616,16 @@ pub struct MachineDeploymentStatus {
     /// v1beta2 groups all the fields that will be added or modified in MachineDeployment's status with the V1Beta2 version.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub v1beta2: Option<MachineDeploymentStatusV1beta2>,
+}
+
+/// status is the observed state of MachineDeployment.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum MachineDeploymentStatusPhase {
+    ScalingUp,
+    ScalingDown,
+    Running,
+    Failed,
+    Unknown,
 }
 
 /// v1beta2 groups all the fields that will be added or modified in MachineDeployment's status with the V1Beta2 version.

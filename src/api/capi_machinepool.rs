@@ -13,7 +13,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// MachinePoolSpec defines the desired state of MachinePool.
+/// spec is the desired state of MachinePool.
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 #[kube(
     group = "cluster.x-k8s.io",
@@ -36,7 +36,7 @@ pub struct MachinePoolSpec {
         rename = "failureDomains"
     )]
     pub failure_domains: Option<Vec<String>>,
-    /// Minimum number of seconds for which a newly created machine instances should
+    /// minReadySeconds is the minimum number of seconds for which a newly created machine instances should
     /// be ready.
     /// Defaults to 0 (machine instance will be considered available as soon as it
     /// is ready)
@@ -54,7 +54,7 @@ pub struct MachinePoolSpec {
         rename = "providerIDList"
     )]
     pub provider_id_list: Option<Vec<String>>,
-    /// Number of desired machines. Defaults to 1.
+    /// replicas is the number of desired machines. Defaults to 1.
     /// This is a pointer to distinguish between explicit zero and not specified.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replicas: Option<i32>,
@@ -65,17 +65,17 @@ pub struct MachinePoolSpec {
 /// template describes the machines that will be created.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolTemplate {
-    /// Standard object's metadata.
+    /// metadata is the standard object's metadata.
     /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<MachinePoolTemplateMetadata>,
-    /// Specification of the desired behavior of the machine.
+    /// spec is the specification of the desired behavior of the machine.
     /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spec: Option<MachinePoolTemplateSpec>,
 }
 
-/// Standard object's metadata.
+/// metadata is the standard object's metadata.
 /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolTemplateMetadata {
@@ -85,7 +85,7 @@ pub struct MachinePoolTemplateMetadata {
     /// More info: http://kubernetes.io/docs/user-guide/annotations
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<BTreeMap<String, String>>,
-    /// Map of string keys and values that can be used to organize and categorize
+    /// labels is a map of string keys and values that can be used to organize and categorize
     /// (scope and select) objects. May match selectors of replication controllers
     /// and services.
     /// More info: http://kubernetes.io/docs/user-guide/labels
@@ -93,7 +93,7 @@ pub struct MachinePoolTemplateMetadata {
     pub labels: Option<BTreeMap<String, String>>,
 }
 
-/// Specification of the desired behavior of the machine.
+/// spec is the specification of the desired behavior of the machine.
 /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolTemplateSpec {
@@ -300,17 +300,31 @@ pub struct MachinePoolTemplateSpecInfrastructureRef {
 /// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolTemplateSpecReadinessGates {
-    /// conditionType refers to a positive polarity condition (status true means good) with matching type in the Machine's condition list.
+    /// conditionType refers to a condition with matching type in the Machine's condition list.
     /// If the conditions doesn't exist, it will be treated as unknown.
     /// Note: Both Cluster API conditions or conditions added by 3rd party controllers can be used as readiness gates.
     #[serde(rename = "conditionType")]
     pub condition_type: String,
+    /// polarity of the conditionType specified in this readinessGate.
+    /// Valid values are Positive, Negative and omitted.
+    /// When omitted, the default behaviour will be Positive.
+    /// A positive polarity means that the condition should report a true status under normal conditions.
+    /// A negative polarity means that the condition should report a false status under normal conditions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub polarity: Option<MachinePoolTemplateSpecReadinessGatesPolarity>,
 }
 
-/// MachinePoolStatus defines the observed state of MachinePool.
+/// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum MachinePoolTemplateSpecReadinessGatesPolarity {
+    Positive,
+    Negative,
+}
+
+/// status is the observed state of MachinePool.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachinePoolStatus {
-    /// The number of available replicas (ready for at least minReadySeconds) for this MachinePool.
+    /// availableReplicas is the number of available replicas (ready for at least minReadySeconds) for this MachinePool.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -365,10 +379,9 @@ pub struct MachinePoolStatus {
     )]
     pub observed_generation: Option<i64>,
     /// phase represents the current phase of cluster actuation.
-    /// E.g. Pending, Running, Terminating, Failed etc.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub phase: Option<String>,
-    /// The number of ready replicas for this MachinePool. A machine is considered ready when the node has been created and is "Ready".
+    pub phase: Option<MachinePoolStatusPhase>,
+    /// readyReplicas is the number of ready replicas for this MachinePool. A machine is considered ready when the node has been created and is "Ready".
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -378,7 +391,7 @@ pub struct MachinePoolStatus {
     /// replicas is the most recently observed number of replicas.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replicas: Option<i32>,
-    /// Total number of unavailable machine instances targeted by this machine pool.
+    /// unavailableReplicas is the total number of unavailable machine instances targeted by this machine pool.
     /// This is the total number of machine instances that are still required for
     /// the machine pool to have 100% available capacity. They may either
     /// be machine instances that are running but not yet available or machine instances
@@ -394,6 +407,21 @@ pub struct MachinePoolStatus {
     /// v1beta2 groups all the fields that will be added or modified in MachinePool's status with the V1Beta2 version.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub v1beta2: Option<MachinePoolStatusV1beta2>,
+}
+
+/// status is the observed state of MachinePool.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum MachinePoolStatusPhase {
+    Pending,
+    Provisioning,
+    Provisioned,
+    Running,
+    ScalingUp,
+    ScalingDown,
+    Scaling,
+    Deleting,
+    Failed,
+    Unknown,
 }
 
 /// v1beta2 groups all the fields that will be added or modified in MachinePool's status with the V1Beta2 version.

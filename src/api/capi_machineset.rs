@@ -13,7 +13,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// MachineSetSpec defines the desired state of MachineSet.
+/// spec is the desired state of MachineSet.
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 #[kube(
     group = "cluster.x-k8s.io",
@@ -37,6 +37,14 @@ pub struct MachineSetSpec {
         rename = "deletePolicy"
     )]
     pub delete_policy: Option<MachineSetDeletePolicy>,
+    /// machineNamingStrategy allows changing the naming pattern used when creating Machines.
+    /// Note: InfraMachines & BootstrapConfigs will use the same name as the corresponding Machines.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "machineNamingStrategy"
+    )]
+    pub machine_naming_strategy: Option<MachineSetMachineNamingStrategy>,
     /// minReadySeconds is the minimum number of seconds for which a Node for a newly created machine should be ready before considering the replica available.
     /// Defaults to 0 (machine will be considered available as soon as the Node is ready)
     #[serde(
@@ -76,12 +84,36 @@ pub struct MachineSetSpec {
     pub template: Option<MachineSetTemplate>,
 }
 
-/// MachineSetSpec defines the desired state of MachineSet.
+/// spec is the desired state of MachineSet.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum MachineSetDeletePolicy {
     Random,
     Newest,
     Oldest,
+}
+
+/// machineNamingStrategy allows changing the naming pattern used when creating Machines.
+/// Note: InfraMachines & BootstrapConfigs will use the same name as the corresponding Machines.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct MachineSetMachineNamingStrategy {
+    /// template defines the template to use for generating the names of the
+    /// Machine objects.
+    /// If not defined, it will fallback to `{{ .machineSet.name }}-{{ .random }}`.
+    /// If the generated name string exceeds 63 characters, it will be trimmed to
+    /// 58 characters and will
+    /// get concatenated with a random suffix of length 5.
+    /// Length of the template string must not exceed 256 characters.
+    /// The template allows the following variables `.cluster.name`,
+    /// `.machineSet.name` and `.random`.
+    /// The variable `.cluster.name` retrieves the name of the cluster object
+    /// that owns the Machines being created.
+    /// The variable `.machineSet.name` retrieves the name of the MachineSet
+    /// object that owns the Machines being created.
+    /// The variable `.random` is substituted with random alphanumeric string,
+    /// without vowels, of length 5. This variable is required part of the
+    /// template. If not provided, validation will fail.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
 }
 
 /// selector is a label query over machines that should match the replica count.
@@ -130,17 +162,17 @@ pub struct MachineSetSelectorMatchExpressions {
 /// Object references to custom resources are treated as templates.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineSetTemplate {
-    /// Standard object's metadata.
+    /// metadata is the standard object's metadata.
     /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<MachineSetTemplateMetadata>,
-    /// Specification of the desired behavior of the machine.
+    /// spec is the specification of the desired behavior of the machine.
     /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spec: Option<MachineSetTemplateSpec>,
 }
 
-/// Standard object's metadata.
+/// metadata is the standard object's metadata.
 /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineSetTemplateMetadata {
@@ -150,7 +182,7 @@ pub struct MachineSetTemplateMetadata {
     /// More info: http://kubernetes.io/docs/user-guide/annotations
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<BTreeMap<String, String>>,
-    /// Map of string keys and values that can be used to organize and categorize
+    /// labels is a map of string keys and values that can be used to organize and categorize
     /// (scope and select) objects. May match selectors of replication controllers
     /// and services.
     /// More info: http://kubernetes.io/docs/user-guide/labels
@@ -158,7 +190,7 @@ pub struct MachineSetTemplateMetadata {
     pub labels: Option<BTreeMap<String, String>>,
 }
 
-/// Specification of the desired behavior of the machine.
+/// spec is the specification of the desired behavior of the machine.
 /// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineSetTemplateSpec {
@@ -365,17 +397,31 @@ pub struct MachineSetTemplateSpecInfrastructureRef {
 /// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineSetTemplateSpecReadinessGates {
-    /// conditionType refers to a positive polarity condition (status true means good) with matching type in the Machine's condition list.
+    /// conditionType refers to a condition with matching type in the Machine's condition list.
     /// If the conditions doesn't exist, it will be treated as unknown.
     /// Note: Both Cluster API conditions or conditions added by 3rd party controllers can be used as readiness gates.
     #[serde(rename = "conditionType")]
     pub condition_type: String,
+    /// polarity of the conditionType specified in this readinessGate.
+    /// Valid values are Positive, Negative and omitted.
+    /// When omitted, the default behaviour will be Positive.
+    /// A positive polarity means that the condition should report a true status under normal conditions.
+    /// A negative polarity means that the condition should report a false status under normal conditions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub polarity: Option<MachineSetTemplateSpecReadinessGatesPolarity>,
 }
 
-/// MachineSetStatus defines the observed state of MachineSet.
+/// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum MachineSetTemplateSpecReadinessGatesPolarity {
+    Positive,
+    Negative,
+}
+
+/// status is the observed state of MachineSet.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineSetStatus {
-    /// The number of available replicas (ready for at least minReadySeconds) for this MachineSet.
+    /// availableReplicas is the number of available replicas (ready for at least minReadySeconds) for this MachineSet.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -385,6 +431,10 @@ pub struct MachineSetStatus {
     /// conditions defines current service state of the MachineSet.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conditions: Option<Vec<Condition>>,
+    /// failureMessage will be set in the event that there is a terminal problem
+    /// reconciling the Machine and will contain a more verbose string suitable
+    /// for logging and human consumption.
+    ///
     /// Deprecated: This field is deprecated and is going to be removed in the next apiVersion. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
     #[serde(
         default,
@@ -392,6 +442,10 @@ pub struct MachineSetStatus {
         rename = "failureMessage"
     )]
     pub failure_message: Option<String>,
+    /// failureReason will be set in the event that there is a terminal problem
+    /// reconciling the Machine and will contain a succinct value suitable
+    /// for machine interpretation.
+    ///
     /// In the event that there is a terminal problem reconciling the
     /// replicas, both FailureReason and FailureMessage will be set. FailureReason
     /// will be populated with a succinct value suitable for machine
@@ -418,7 +472,7 @@ pub struct MachineSetStatus {
         rename = "failureReason"
     )]
     pub failure_reason: Option<String>,
-    /// The number of replicas that have labels matching the labels of the machine template of the MachineSet.
+    /// fullyLabeledReplicas is the number of replicas that have labels matching the labels of the machine template of the MachineSet.
     ///
     /// Deprecated: This field is deprecated and is going to be removed in the next apiVersion. Please see https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20240916-improve-status-in-CAPI-resources.md for more details.
     #[serde(
@@ -434,7 +488,7 @@ pub struct MachineSetStatus {
         rename = "observedGeneration"
     )]
     pub observed_generation: Option<i64>,
-    /// The number of ready replicas for this MachineSet. A machine is considered ready when the node has been created and is "Ready".
+    /// readyReplicas is the number of ready replicas for this MachineSet. A machine is considered ready when the node has been created and is "Ready".
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

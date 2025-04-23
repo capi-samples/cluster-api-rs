@@ -11,7 +11,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// IPAddressClaimSpec is the desired state of an IPAddressClaim.
+/// spec is the desired state of IPAddressClaim.
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 #[kube(
     group = "ipam.cluster.x-k8s.io",
@@ -50,7 +50,7 @@ pub struct IPAddressClaimPoolRef {
     pub name: String,
 }
 
-/// IPAddressClaimStatus is the observed status of a IPAddressClaim.
+/// status is the observed state of IPAddressClaim.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct IPAddressClaimStatus {
     /// addressRef is a reference to the address that was created for this claim.
@@ -63,6 +63,9 @@ pub struct IPAddressClaimStatus {
     /// conditions summarises the current state of the IPAddressClaim
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conditions: Option<Vec<Condition>>,
+    /// v1beta2 groups all the fields that will be added or modified in IPAddressClaim's status with the V1Beta2 version.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub v1beta2: Option<IPAddressClaimStatusV1beta2>,
 }
 
 /// addressRef is a reference to the address that was created for this claim.
@@ -75,4 +78,12 @@ pub struct IPAddressClaimStatusAddressRef {
     /// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+}
+
+/// v1beta2 groups all the fields that will be added or modified in IPAddressClaim's status with the V1Beta2 version.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct IPAddressClaimStatusV1beta2 {
+    /// conditions represents the observations of a IPAddressClaim's current state.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conditions: Option<Vec<Condition>>,
 }

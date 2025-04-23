@@ -10,7 +10,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// IPAddressSpec is the desired state of an IPAddress.
+/// spec is the desired state of IPAddress.
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 #[kube(
     group = "ipam.cluster.x-k8s.io",

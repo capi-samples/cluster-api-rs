@@ -12,7 +12,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// ExtensionConfigSpec is the desired state of the ExtensionConfig
+/// spec is the desired state of the ExtensionConfig.
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 #[kube(
     group = "runtime.cluster.x-k8s.io",
@@ -135,7 +135,7 @@ pub struct ExtensionConfigNamespaceSelectorMatchExpressions {
     pub values: Option<Vec<String>>,
 }
 
-/// ExtensionConfigStatus is the current state of the ExtensionConfig
+/// status is the current state of the ExtensionConfig
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct ExtensionConfigStatus {
     /// conditions define the current service state of the ExtensionConfig.
@@ -144,6 +144,9 @@ pub struct ExtensionConfigStatus {
     /// handlers defines the current ExtensionHandlers supported by an Extension.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handlers: Option<Vec<ExtensionConfigStatusHandlers>>,
+    /// v1beta2 groups all the fields that will be added or modified in ExtensionConfig's status with the V1Beta2 version.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub v1beta2: Option<ExtensionConfigStatusV1beta2>,
 }
 
 /// ExtensionHandler specifies the details of a handler for a particular runtime hook registered by an Extension server.
@@ -156,7 +159,7 @@ pub struct ExtensionConfigStatusHandlers {
         skip_serializing_if = "Option::is_none",
         rename = "failurePolicy"
     )]
-    pub failure_policy: Option<String>,
+    pub failure_policy: Option<ExtensionConfigStatusHandlersFailurePolicy>,
     /// name is the unique name of the ExtensionHandler.
     pub name: String,
     /// requestHook defines the versioned runtime hook which this ExtensionHandler serves.
@@ -172,6 +175,13 @@ pub struct ExtensionConfigStatusHandlers {
     pub timeout_seconds: Option<i32>,
 }
 
+/// ExtensionHandler specifies the details of a handler for a particular runtime hook registered by an Extension server.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum ExtensionConfigStatusHandlersFailurePolicy {
+    Ignore,
+    Fail,
+}
+
 /// requestHook defines the versioned runtime hook which this ExtensionHandler serves.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct ExtensionConfigStatusHandlersRequestHook {
@@ -180,4 +190,13 @@ pub struct ExtensionConfigStatusHandlersRequestHook {
     pub api_version: String,
     /// hook is the name of the hook.
     pub hook: String,
+}
+
+/// v1beta2 groups all the fields that will be added or modified in ExtensionConfig's status with the V1Beta2 version.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+pub struct ExtensionConfigStatusV1beta2 {
+    /// conditions represents the observations of a ExtensionConfig's current state.
+    /// Known condition types are Discovered, Paused.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conditions: Option<Vec<Condition>>,
 }

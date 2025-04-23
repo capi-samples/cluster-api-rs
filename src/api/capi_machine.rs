@@ -12,7 +12,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// MachineSpec defines the desired state of Machine.
+/// spec is the desired state of Machine.
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 #[kube(
     group = "cluster.x-k8s.io",
@@ -228,14 +228,28 @@ pub struct MachineInfrastructureRef {
 /// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineReadinessGates {
-    /// conditionType refers to a positive polarity condition (status true means good) with matching type in the Machine's condition list.
+    /// conditionType refers to a condition with matching type in the Machine's condition list.
     /// If the conditions doesn't exist, it will be treated as unknown.
     /// Note: Both Cluster API conditions or conditions added by 3rd party controllers can be used as readiness gates.
     #[serde(rename = "conditionType")]
     pub condition_type: String,
+    /// polarity of the conditionType specified in this readinessGate.
+    /// Valid values are Positive, Negative and omitted.
+    /// When omitted, the default behaviour will be Positive.
+    /// A positive polarity means that the condition should report a true status under normal conditions.
+    /// A negative polarity means that the condition should report a false status under normal conditions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub polarity: Option<MachineReadinessGatesPolarity>,
 }
 
-/// MachineStatus defines the observed state of Machine.
+/// MachineReadinessGate contains the type of a Machine condition to be used as a readiness gate.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum MachineReadinessGatesPolarity {
+    Positive,
+    Negative,
+}
+
+/// status is the observed state of Machine.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineStatus {
     /// addresses is a list of addresses assigned to the machine.
@@ -341,9 +355,8 @@ pub struct MachineStatus {
     )]
     pub observed_generation: Option<i64>,
     /// phase represents the current phase of machine actuation.
-    /// E.g. Pending, Running, Terminating, Failed etc.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub phase: Option<String>,
+    pub phase: Option<MachineStatusPhase>,
     /// v1beta2 groups all the fields that will be added or modified in Machine's status with the V1Beta2 version.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub v1beta2: Option<MachineStatusV1beta2>,
@@ -352,11 +365,25 @@ pub struct MachineStatus {
 /// MachineAddress contains information for the node's address.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineStatusAddresses {
-    /// The machine address.
+    /// address is the machine address.
     pub address: String,
-    /// Machine address type, one of Hostname, ExternalIP, InternalIP, ExternalDNS or InternalDNS.
+    /// type is the machine address type, one of Hostname, ExternalIP, InternalIP, ExternalDNS or InternalDNS.
     #[serde(rename = "type")]
-    pub r#type: String,
+    pub r#type: MachineStatusAddressesType,
+}
+
+/// MachineAddress contains information for the node's address.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum MachineStatusAddressesType {
+    Hostname,
+    #[serde(rename = "ExternalIP")]
+    ExternalIp,
+    #[serde(rename = "InternalIP")]
+    InternalIp,
+    #[serde(rename = "ExternalDNS")]
+    ExternalDns,
+    #[serde(rename = "InternalDNS")]
+    InternalDns,
 }
 
 /// deletion contains information relating to removal of the Machine.
@@ -467,6 +494,19 @@ pub struct MachineStatusNodeRef {
     /// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uid: Option<String>,
+}
+
+/// status is the observed state of Machine.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum MachineStatusPhase {
+    Pending,
+    Provisioning,
+    Provisioned,
+    Running,
+    Deleting,
+    Deleted,
+    Failed,
+    Unknown,
 }
 
 /// v1beta2 groups all the fields that will be added or modified in Machine's status with the V1Beta2 version.

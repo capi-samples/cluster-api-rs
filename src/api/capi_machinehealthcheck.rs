@@ -14,7 +14,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// Specification of machine health check policy
+/// spec is the specification of machine health check policy
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 #[kube(
     group = "cluster.x-k8s.io",
@@ -30,7 +30,8 @@ pub struct MachineHealthCheckSpec {
     /// clusterName is the name of the Cluster this object belongs to.
     #[serde(rename = "clusterName")]
     pub cluster_name: String,
-    /// Any further remediation is only allowed if at most "MaxUnhealthy" machines selected by
+    /// maxUnhealthy specifies the maximum number of unhealthy machines allowed.
+    /// Any further remediation is only allowed if at most "maxUnhealthy" machines selected by
     /// "selector" are not healthy.
     ///
     /// Deprecated: This field is deprecated and is going to be removed in the next apiVersion. Please see https://github.com/kubernetes-sigs/cluster-api/issues/10722 for more details.
@@ -70,7 +71,7 @@ pub struct MachineHealthCheckSpec {
         rename = "remediationTemplate"
     )]
     pub remediation_template: Option<ObjectReference>,
-    /// Label selector to match machines whose health will be exercised
+    /// selector is a label selector to match machines whose health will be exercised
     pub selector: MachineHealthCheckSelector,
     /// unhealthyConditions contains a list of the conditions that determine
     /// whether a node is considered unhealthy.  The conditions are combined in a
@@ -81,8 +82,9 @@ pub struct MachineHealthCheckSpec {
         rename = "unhealthyConditions"
     )]
     pub unhealthy_conditions: Option<Vec<MachineHealthCheckUnhealthyConditions>>,
+    /// unhealthyRange specifies the range of unhealthy machines allowed.
     /// Any further remediation is only allowed if the number of machines selected by "selector" as not healthy
-    /// is within the range of "UnhealthyRange". Takes precedence over MaxUnhealthy.
+    /// is within the range of "unhealthyRange". Takes precedence over maxUnhealthy.
     /// Eg. "[3-5]" - This means that remediation will be allowed only when:
     /// (a) there are at least 3 unhealthy machines (and)
     /// (b) there are at most 5 unhealthy machines
@@ -146,7 +148,7 @@ pub struct MachineHealthCheckRemediationTemplate {
     pub uid: Option<String>,
 }
 
-/// Label selector to match machines whose health will be exercised
+/// selector is a label selector to match machines whose health will be exercised
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineHealthCheckSelector {
     /// matchExpressions is a list of label selector requirements. The requirements are ANDed.
@@ -189,26 +191,32 @@ pub struct MachineHealthCheckSelectorMatchExpressions {
 /// status for at least the timeout value, a node is considered unhealthy.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineHealthCheckUnhealthyConditions {
+    /// status of the condition, one of True, False, Unknown.
     pub status: String,
+    /// timeout is the duration that a node must be in a given status for,
+    /// after which the node is considered unhealthy.
+    /// For example, with a value of "1h", the node must match the status
+    /// for at least 1 hour before being considered unhealthy.
     pub timeout: String,
+    /// type of Node condition
     #[serde(rename = "type")]
     pub r#type: String,
 }
 
-/// Most recently observed status of MachineHealthCheck resource
+/// status is the most recently observed status of MachineHealthCheck resource
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct MachineHealthCheckStatus {
     /// conditions defines current service state of the MachineHealthCheck.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conditions: Option<Vec<Condition>>,
-    /// total number of healthy machines counted by this machine health check
+    /// currentHealthy is the total number of healthy machines counted by this machine health check
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         rename = "currentHealthy"
     )]
     pub current_healthy: Option<i32>,
-    /// total number of machines counted by this machine health check
+    /// expectedMachines is the total number of machines counted by this machine health check
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

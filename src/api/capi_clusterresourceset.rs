@@ -12,7 +12,7 @@ mod prelude {
 }
 use self::prelude::*;
 
-/// ClusterResourceSetSpec defines the desired state of ClusterResourceSet.
+/// spec is the desired state of ClusterResourceSet.
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[kube(
     group = "addons.cluster.x-k8s.io",
@@ -24,7 +24,7 @@ use self::prelude::*;
 #[kube(status = "ClusterResourceSetStatus")]
 #[kube(derive = "PartialEq")]
 pub struct ClusterResourceSetSpec {
-    /// Label selector for Clusters. The Clusters that are
+    /// clusterSelector is the label selector for Clusters. The Clusters that are
     /// selected by this will be the ones affected by this ClusterResourceSet.
     /// It must match the Cluster labels. This field is immutable.
     /// Label selector cannot be empty.
@@ -38,7 +38,7 @@ pub struct ClusterResourceSetSpec {
     pub strategy: Option<ClusterResourceSetStrategy>,
 }
 
-/// Label selector for Clusters. The Clusters that are
+/// clusterSelector is the label selector for Clusters. The Clusters that are
 /// selected by this will be the ones affected by this ClusterResourceSet.
 /// It must match the Cluster labels. This field is immutable.
 /// Label selector cannot be empty.
@@ -95,14 +95,14 @@ pub enum ClusterResourceSetResourcesKind {
     ConfigMap,
 }
 
-/// ClusterResourceSetSpec defines the desired state of ClusterResourceSet.
+/// spec is the desired state of ClusterResourceSet.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum ClusterResourceSetStrategy {
     ApplyOnce,
     Reconcile,
 }
 
-/// ClusterResourceSetStatus defines the observed state of ClusterResourceSet.
+/// status is the observed state of ClusterResourceSet.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ClusterResourceSetStatus {
     /// conditions defines current state of the ClusterResourceSet.
