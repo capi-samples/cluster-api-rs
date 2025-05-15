@@ -1,0 +1,17 @@
+sources:
+  versionFile:
+    name: Updated cluster-api version
+    kind: yaml
+    spec:
+      key: $.cluster_api.tag
+      file: version.yaml
+targets:
+  packageFile:
+    name: Sync cluster-api-rs version
+    kind: toml
+    spec:
+      key: package.version
+      file: Cargo.toml
+    transformers:
+      - trimprefix: "v"
+
