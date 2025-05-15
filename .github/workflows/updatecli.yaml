@@ -1,18 +1,24 @@
----
 name: Updatecli
 
 on:
-  # Manually trigger Updatecli via GitHub UI
   workflow_dispatch:
-  # Trigger Updatecli once day by a cronjob
+    inputs:
+      version:
+        description: 'Specific version to publish. Leave empty to auto-determine latest version.'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Run cargo publish in dry-run mode?'
+        required: true
+        default: true
+        type: boolean
   schedule:
-    # * is a special character in YAML so you have to quote this string
     # Run once a day
     - cron: '0 0 * * *'
 
 permissions:
-  contents: "write"
-  pull-requests: "write"
+  contents: write
+  pull-requests: write
 
 jobs:
   crates_io_publish:
@@ -20,6 +26,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install Updatecli in the runner
@@ -28,29 +35,46 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v3
 
-      - name: Update and push the changes
-        id: push
+      - name: Update changes
+        id: update
         env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           GITHUB_USER: "github-action"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           git config --local user.email "49699333+dependabot[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          before=`just current-version ".cluster_api.tag"`
-          just generate-and-commit
-          after=`just current-version ".cluster_api.tag"`
-          if [[ "${before}" != "${after}" ]]; then
+          if [ -z "${{ github.event.inputs.version }}" ]; then
+            echo "No version provided, updating to latest version."
+            before=$(just current-version ".cluster_api.tag")
+            echo "Current version: $before"
+            just generate-and-commit
+            after=$(just current-version ".cluster_api.tag")
+            echo "New version: $after"
+            if [[ "${before}" != "${after}" ]]; then
+              cargo build
+              echo publish=true >> $GITHUB_OUTPUT
+              git push
+            fi
+          else
+            echo "Using provided version: ${{ github.event.inputs.version }}"
+            just generate-manual ${{ github.event.inputs.version }}
+            cargo build
+            git diff
             echo publish=true >> $GITHUB_OUTPUT
-            git push
           fi
 
       - uses: dtolnay/rust-toolchain@stable
-        if: steps.push.outputs.publish == 'true'
+        if: steps.update.outputs.publish == 'true'
 
       - name: cargo login
-        if: steps.push.outputs.publish == 'true'
+        if: steps.update.outputs.publish == 'true'
         run: cargo login ${{ secrets.CRATES_IO_API_TOKEN }}
 
       - name: cargo publish
-        if: steps.push.outputs.publish == 'true'
-        run: cargo publish --all-features
+        if: steps.update.outputs.publish == 'true'
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            cargo publish --all-features --dry-run --allow-dirty
+          else
+            cargo publish --all-features --allow-dirty
+          fi

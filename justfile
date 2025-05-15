@@ -13,6 +13,26 @@ default:
     @just --list --unsorted --color=always
 
 # generates files for CRDS
+generate-manual version: _create-out-dir && fmt
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    just update-manual-version "{{version}}"
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/cluster.x-k8s.io_clusters.yaml" "src/api/capi_cluster.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/cluster.x-k8s.io_clusterclasses.yaml" "src/api/capi_clusterclass.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/cluster.x-k8s.io_clusterclasses.yaml" "src/api/capi_clusterclass.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/cluster.x-k8s.io_machines.yaml" "src/api/capi_machine.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/cluster.x-k8s.io_machinepools.yaml" "src/api/capi_machinepool.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/cluster.x-k8s.io_machinesets.yaml" "src/api/capi_machineset.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/cluster.x-k8s.io_machinedeployments.yaml" "src/api/capi_machinedeployment.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/cluster.x-k8s.io_machinehealthchecks.yaml" "src/api/capi_machinehealthcheck.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/ipam.cluster.x-k8s.io_ipaddressclaims.yaml" "src/api/capi_ipaddressclaim.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/ipam.cluster.x-k8s.io_ipaddresses.yaml" "src/api/capi_ipaddress.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/runtime.cluster.x-k8s.io_extensionconfigs.yaml" "src/api/capi_extensionconfig.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/addons.cluster.x-k8s.io_clusterresourcesets.yaml" "src/api/capi_clusterresourceset.rs" ""
+    just _generate-kopium-url kopium "https://raw.githubusercontent.com/kubernetes-sigs/cluster-api/${version}/config/crd/bases/addons.cluster.x-k8s.io_clusterresourcesetbindings.yaml" "src/api/capi_clusterresourcesetbinding.rs" ""
+
+
+# generates files for CRDS
 generate: _create-out-dir update-version && fmt
     #!/usr/bin/env bash
     set -euxo pipefail
@@ -37,6 +57,10 @@ _generate-kopium-url kpath="" source="" dest="" yqexp="." condition="": _downloa
 
 current-version path: _download-yq
     cat version.yaml | yq '{{path}}'
+
+update-manual-version version: _download-updatecli _download-yq
+    yq -i '.cluster_api.tag = "{{version}}"' version.yaml
+    updatecli apply --debug -c update-version.yaml
 
 update-version: _download-updatecli
     updatecli apply --debug
