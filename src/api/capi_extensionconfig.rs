@@ -5,6 +5,7 @@
 #[allow(unused_imports)]
 mod prelude {
     pub use k8s_openapi::apimachinery::pkg::apis::meta::v1::Condition;
+    #[cfg(feature = "kube-derive")]
     pub use kube::CustomResource;
     pub use schemars::JsonSchema;
     pub use serde::{Deserialize, Serialize};
@@ -13,16 +14,17 @@ mod prelude {
 use self::prelude::*;
 
 /// spec is the desired state of the ExtensionConfig.
-#[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
-#[kube(
+#[cfg_attr(feature = "kube-derive", derive(CustomResource))]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+#[cfg_attr(feature = "kube-derive", kube(
     group = "runtime.cluster.x-k8s.io",
     version = "v1alpha1",
     kind = "ExtensionConfig",
     plural = "extensionconfigs"
-)]
-#[kube(status = "ExtensionConfigStatus")]
-#[kube(derive = "Default")]
-#[kube(derive = "PartialEq")]
+))]
+#[cfg_attr(feature = "kube-derive", kube(status = "ExtensionConfigStatus"))]
+#[cfg_attr(feature = "kube-derive", kube(derive = "Default"))]
+#[cfg_attr(feature = "kube-derive", kube(derive = "PartialEq"))]
 pub struct ExtensionConfigSpec {
     /// clientConfig defines how to communicate with the Extension server.
     #[serde(rename = "clientConfig")]

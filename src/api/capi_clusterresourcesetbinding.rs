@@ -4,6 +4,7 @@
 
 #[allow(unused_imports)]
 mod prelude {
+    #[cfg(feature = "kube-derive")]
     pub use kube::CustomResource;
     pub use schemars::JsonSchema;
     pub use serde::{Deserialize, Serialize};
@@ -11,16 +12,14 @@ mod prelude {
 use self::prelude::*;
 
 /// spec is the desired state of ClusterResourceSetBinding.
-#[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
-#[kube(
-    group = "addons.cluster.x-k8s.io",
-    version = "v1beta1",
-    kind = "ClusterResourceSetBinding",
-    plural = "clusterresourcesetbindings"
+#[cfg_attr(feature = "kube-derive",
+    derive(CustomResource),
+    kube(group = "addons.cluster.x-k8s.io", version = "v1beta1", kind = "ClusterResourceSetBinding", plural = "clusterresourcesetbindings"),
+    kube(namespaced),
+    kube(derive = "Default"),
+    kube(derive = "PartialEq")
 )]
-#[kube(namespaced)]
-#[kube(derive = "Default")]
-#[kube(derive = "PartialEq")]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct ClusterResourceSetBindingSpec {
     /// bindings is a list of ClusterResourceSets and their resources.
     #[serde(default, skip_serializing_if = "Option::is_none")]

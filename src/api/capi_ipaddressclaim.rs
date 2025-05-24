@@ -5,6 +5,7 @@
 #[allow(unused_imports)]
 mod prelude {
     pub use k8s_openapi::apimachinery::pkg::apis::meta::v1::Condition;
+    #[cfg(feature = "kube-derive")]
     pub use kube::CustomResource;
     pub use schemars::JsonSchema;
     pub use serde::{Deserialize, Serialize};
@@ -12,17 +13,15 @@ mod prelude {
 use self::prelude::*;
 
 /// spec is the desired state of IPAddressClaim.
-#[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
-#[kube(
-    group = "ipam.cluster.x-k8s.io",
-    version = "v1beta1",
-    kind = "IPAddressClaim",
-    plural = "ipaddressclaims"
+#[cfg_attr(feature = "kube-derive",
+    derive(CustomResource),
+    kube(group = "ipam.cluster.x-k8s.io", version = "v1beta1", kind = "IPAddressClaim", plural = "ipaddressclaims"),
+    kube(namespaced),
+    kube(status = "IPAddressClaimStatus"),
+    kube(derive = "Default"),
+    kube(derive = "PartialEq")
 )]
-#[kube(namespaced)]
-#[kube(status = "IPAddressClaimStatus")]
-#[kube(derive = "Default")]
-#[kube(derive = "PartialEq")]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 pub struct IPAddressClaimSpec {
     /// clusterName is the name of the Cluster this object belongs to.
     #[serde(
